@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Save, Activity, Clock, Hash, ChevronRight, ChevronDown, AlertCircle, ExternalLink, Sun, Moon, List, X } from 'lucide-react';
+import { Terminal, Save, Activity, Clock, Hash, ChevronRight, ChevronDown, AlertCircle, ExternalLink, Sun, Moon, List, X, ArrowUp } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 const TrendRadar = ({ theme, toggleTheme }) => {
@@ -10,6 +10,7 @@ const TrendRadar = ({ theme, toggleTheme }) => {
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState(null);
   const [showToc, setShowToc] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   
   const containerRef = useRef(null);
   const sectionRefs = useRef({});
@@ -70,36 +71,38 @@ const TrendRadar = ({ theme, toggleTheme }) => {
   };
 
   // 平滑滚动到指定分组
-  const scrollToSection = (groupId) => {
-    const element = sectionRefs.current[groupId];
+  const scrollToSection = (sectionId) => {
+    const element = sectionRefs.current[sectionId];
     if (element) {
-      const yOffset = -100; // 顶部偏移量，避免被固定导航栏遮挡
+      const yOffset = -80; // 顶部导航栏高度
       const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
       window.scrollTo({ top: y, behavior: 'smooth' });
-      setShowToc(false); // 关闭目录
+      setShowToc(false);
     }
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // 监听滚动，更新当前激活的分组
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY);
+      if (!data || saving) return;
+
+      const scrollPosition = window.scrollY;
       
-      // 检测当前在哪个分组
-      if (data && data.groups) {
-        const scrollPosition = window.scrollY + 200;
-        
-        for (const group of data.groups) {
-          const element = sectionRefs.current[group.id];
-          if (element) {
-            const { top, bottom } = element.getBoundingClientRect();
-            const absoluteTop = top + window.scrollY;
-            const absoluteBottom = bottom + window.scrollY;
-            
-            if (scrollPosition >= absoluteTop && scrollPosition <= absoluteBottom) {
-              setActiveSection(group.id);
-              break;
-            }
+      // 显示/隐藏返回顶部按钮
+      setShowScrollTop(scrollPosition > 400);
+      
+      // 找到当前可见的section
+      for (const group of data.groups) {
+        const element = sectionRefs.current[group.id];
+        if (element) {
+          const { top, bottom } = element.getBoundingClientRect();
+          if (top <= 150 && bottom > 150) {
+            setActiveSection(group.id);
+            break;
           }
         }
       }
@@ -312,13 +315,6 @@ const TrendRadar = ({ theme, toggleTheme }) => {
             {!saving && (
               <div className="flex gap-3 w-full md:w-auto">
                 <button 
-                  onClick={() => setShowToc(!showToc)}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-void border-2 border-tertiary text-tertiary font-display font-bold uppercase tracking-wider hover:bg-tertiary hover:text-void hover:shadow-[4px_4px_0px_rgba(102,178,255,1)] active:translate-y-1 active:shadow-none transition-all"
-                >
-                  <List size={18} />
-                  <span className="hidden md:inline">目录</span>
-                </button>
-                <button 
                   onClick={handleSaveImage}
                   disabled={saving}
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-void border-2 border-primary text-primary font-display font-bold uppercase tracking-wider hover:bg-primary hover:text-void hover:shadow-[4px_4px_0px_rgba(255,176,0,1)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -409,6 +405,37 @@ const TrendRadar = ({ theme, toggleTheme }) => {
         </footer>
 
       </main>
+
+      {/* 悬浮操作按钮 - 右下角 */}
+      {!saving && (
+        <div className="fixed bottom-8 right-8 z-40 flex flex-col gap-3">
+          {/* 目录按钮 */}
+          <button
+            onClick={() => setShowToc(!showToc)}
+            className="group relative w-14 h-14 bg-tertiary border-2 border-tertiary text-void hover:bg-void hover:text-tertiary transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center"
+            title="打开目录"
+          >
+            <List size={24} className="transition-transform group-hover:scale-110" />
+            <span className="absolute right-16 top-1/2 -translate-y-1/2 bg-tertiary text-void px-3 py-1 text-sm font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              目录导航
+            </span>
+          </button>
+
+          {/* 返回顶部按钮 */}
+          {showScrollTop && (
+            <button
+              onClick={scrollToTop}
+              className="group relative w-14 h-14 bg-primary border-2 border-primary text-void hover:bg-void hover:text-primary transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center animate-fadeIn"
+              title="返回顶部"
+            >
+              <ArrowUp size={24} className="transition-transform group-hover:scale-110 group-hover:-translate-y-1" />
+              <span className="absolute right-16 top-1/2 -translate-y-1/2 bg-primary text-void px-3 py-1 text-sm font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                回到顶部
+              </span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
