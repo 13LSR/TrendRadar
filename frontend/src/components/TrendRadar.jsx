@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Save, Activity, Clock, Hash, ChevronRight, ChevronDown, AlertCircle, ExternalLink, Sun, Moon } from 'lucide-react';
+import { Terminal, Save, Activity, Clock, Hash, ChevronRight, ChevronDown, AlertCircle, ExternalLink, Sun, Moon, List, X } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 const TrendRadar = ({ theme, toggleTheme }) => {
@@ -8,8 +8,11 @@ const TrendRadar = ({ theme, toggleTheme }) => {
   const [error, setError] = useState(null);
   const [scrolled, setScrolled] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [activeSection, setActiveSection] = useState(null);
+  const [showToc, setShowToc] = useState(false);
   
   const containerRef = useRef(null);
+  const sectionRefs = useRef({});
 
   // 计算两个字符串的相似度
   const calculateSimilarity = (str1, str2) => {
@@ -66,10 +69,49 @@ const TrendRadar = ({ theme, toggleTheme }) => {
     return grouped;
   };
 
+  // 平滑滚动到指定分组
+  const scrollToSection = (groupId) => {
+    const element = sectionRefs.current[groupId];
+    if (element) {
+      const yOffset = -100; // 顶部偏移量，避免被固定导航栏遮挡
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+      setShowToc(false); // 关闭目录
+    }
+  };
+
+  // 监听滚动，更新当前激活的分组
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY);
+    const handleScroll = () => {
+      setScrolled(window.scrollY);
+      
+      // 检测当前在哪个分组
+      if (data && data.groups) {
+        const scrollPosition = window.scrollY + 200;
+        
+        for (const group of data.groups) {
+          const element = sectionRefs.current[group.id];
+          if (element) {
+            const { top, bottom } = element.getBoundingClientRect();
+            const absoluteTop = top + window.scrollY;
+            const absoluteBottom = bottom + window.scrollY;
+            
+            if (scrollPosition >= absoluteTop && scrollPosition <= absoluteBottom) {
+              setActiveSection(group.id);
+              break;
+            }
+          }
+        }
+      }
+    };
+
     window.addEventListener('scroll', handleScroll);
-    
+    handleScroll(); // 初始化
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [data]);
+
+  useEffect(() => {
     // Fetch data with cache busting timestamp
     const timestamp = new Date().getTime();
     fetch(`./data.json?t=${timestamp}`)
@@ -86,8 +128,6 @@ const TrendRadar = ({ theme, toggleTheme }) => {
         setError(err.message);
         setLoading(false);
       });
-
-    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const handleSaveImage = () => {
@@ -196,6 +236,64 @@ const TrendRadar = ({ theme, toggleTheme }) => {
         </div>
       </header>
 
+      {/* 目录面板 */}
+      {showToc && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
+          {/* 背景遮罩 */}
+          <div 
+            className="absolute inset-0 bg-void/80 backdrop-blur-sm"
+            onClick={() => setShowToc(false)}
+          />
+          
+          {/* 目录内容 */}
+          <div className="relative w-full max-w-2xl max-h-[70vh] overflow-y-auto bg-surface border-2 border-primary shadow-[0_0_30px_rgba(255,176,0,0.3)]">
+            {/* 头部 */}
+            <div className="sticky top-0 bg-surface border-b-2 border-primary p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <List size={20} className="text-primary" />
+                <h2 className="font-display font-bold text-xl text-primary uppercase tracking-wider">
+                  内容目录
+                </h2>
+              </div>
+              <button
+                onClick={() => setShowToc(false)}
+                className="p-2 hover:bg-primary/10 transition-colors"
+              >
+                <X size={20} className="text-dim hover:text-primary" />
+              </button>
+            </div>
+
+            {/* 目录列表 */}
+            <div className="p-4 space-y-2">
+              {data.groups.map((group) => (
+                <button
+                  key={group.id}
+                  onClick={() => scrollToSection(group.id)}
+                  className={`w-full text-left p-3 border-l-4 transition-all ${
+                    activeSection === group.id
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-dim/30 hover:border-tertiary hover:bg-surface/50 text-bone'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-dim font-mono">{group.index}</span>
+                      <span className="font-bold text-lg">{group.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-dim">{group.count} 条</span>
+                      {group.isHot && (
+                        <span className="text-xs text-secondary animate-pulse">🔥</span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="relative z-10 max-w-4xl mx-auto p-4 md:p-8">
         
         {/* Dashboard Header Card */}
@@ -220,6 +318,13 @@ const TrendRadar = ({ theme, toggleTheme }) => {
             {!saving && (
               <div className="flex gap-3 w-full md:w-auto">
                 <button 
+                  onClick={() => setShowToc(!showToc)}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-void border-2 border-tertiary text-tertiary font-display font-bold uppercase tracking-wider hover:bg-tertiary hover:text-void hover:shadow-[4px_4px_0px_rgba(102,178,255,1)] active:translate-y-1 active:shadow-none transition-all"
+                >
+                  <List size={18} />
+                  <span className="hidden md:inline">目录</span>
+                </button>
+                <button 
                   onClick={handleSaveImage}
                   disabled={saving}
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-void border-2 border-primary text-primary font-display font-bold uppercase tracking-wider hover:bg-primary hover:text-void hover:shadow-[4px_4px_0px_rgba(255,176,0,1)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -243,7 +348,11 @@ const TrendRadar = ({ theme, toggleTheme }) => {
         {/* Content Groups */}
         <div className="space-y-12">
           {data.groups.map((group) => (
-            <section key={group.id} className="relative">
+            <section 
+              key={group.id} 
+              ref={(el) => (sectionRefs.current[group.id] = el)}
+              className="relative"
+            >
               {/* Group Header */}
               <div className="flex items-end justify-between border-b-2 border-primary mb-6 pb-2">
                 <div className="flex items-center gap-4">
