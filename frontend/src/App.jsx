@@ -31,6 +31,16 @@ function App() {
       root.classList.remove('light');
     }
     localStorage.setItem('trendradar-theme-v2', theme);
+
+    // Update favicon based on theme
+    const favicon = document.getElementById('favicon');
+    if (favicon) {
+      if (theme === 'light') {
+        favicon.href = 'https://tc.lcxj.dpdns.org/docs/mgb.ico';
+      } else {
+        favicon.href = 'https://tc.lcxj.dpdns.org/docs/mgh.ico';
+      }
+    }
   }, [theme]);
 
   const toggleTheme = () => {
