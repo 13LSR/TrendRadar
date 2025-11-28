@@ -204,13 +204,7 @@ const TrendRadar = ({ theme, toggleTheme }) => {
   return (
     <div className="min-h-screen bg-void text-bone font-mono selection:bg-primary selection:text-void overflow-x-hidden" ref={containerRef}>
       
-      {/* CRT Overlay Effect (Visual Atmosphere) - Only show in Dark Mode */}
-      {!saving && theme !== 'light' && (
-        <>
-          <div className="pointer-events-none fixed inset-0 z-50 h-full w-full bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] pointer-events-none" />
-          <div className="fixed inset-0 z-0 opacity-5 bg-[size:40px_40px] bg-grid-pattern pointer-events-none"></div>
-        </>
-      )}
+      {/* CRT Overlay Effect removed for better readability */}
 
       {/* Top Status Bar */}
       <header className="sticky top-0 z-40 border-b-2 border-surface bg-void/95 backdrop-blur-sm">
@@ -306,7 +300,7 @@ const TrendRadar = ({ theme, toggleTheme }) => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div>
               <h1 className="font-display text-4xl md:text-5xl font-bold text-bone uppercase mb-2 tracking-wide drop-shadow-lg">
-                热点新闻分析
+                热点新闻
               </h1>
               <div className="flex items-center gap-2 text-primary text-sm">
                 <Terminal size={16} />
