@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Save, Activity, Clock, Hash, ChevronRight, AlertCircle, ExternalLink, Sun, Moon } from 'lucide-react';
+import { Terminal, Save, Activity, Clock, Hash, ChevronRight, ChevronDown, AlertCircle, ExternalLink, Sun, Moon } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 const TrendRadar = ({ theme, toggleTheme }) => {
@@ -10,6 +10,61 @@ const TrendRadar = ({ theme, toggleTheme }) => {
   const [saving, setSaving] = useState(false);
   
   const containerRef = useRef(null);
+
+  // 计算两个字符串的相似度
+  const calculateSimilarity = (str1, str2) => {
+    const len1 = str1.length;
+    const len2 = str2.length;
+    const maxLen = Math.max(len1, len2);
+    if (maxLen === 0) return 1.0;
+    
+    // 简化版：检查较短字符串是否包含在较长字符串中
+    const [shorter, longer] = len1 < len2 ? [str1, str2] : [str2, str1];
+    if (longer.includes(shorter)) return 0.85;
+    
+    // 检查核心关键词匹配（去除数字后比较）
+    const clean1 = str1.replace(/\d+/g, '').trim();
+    const clean2 = str2.replace(/\d+/g, '').trim();
+    if (clean1 === clean2 && clean1.length > 5) return 0.9;
+    
+    // 计算共同字符比例
+    const set1 = new Set(str1);
+    const set2 = new Set(str2);
+    const intersection = new Set([...set1].filter(x => set2.has(x)));
+    const union = new Set([...set1, ...set2]);
+    return intersection.size / union.size;
+  };
+
+  // 将相似的新闻项分组
+  const groupSimilarItems = (items) => {
+    const grouped = [];
+    const used = new Set();
+
+    items.forEach((item, index) => {
+      if (used.has(index)) return;
+
+      const group = {
+        mainItem: item,
+        duplicates: []
+      };
+
+      // 查找相似的项
+      items.forEach((otherItem, otherIndex) => {
+        if (otherIndex <= index || used.has(otherIndex)) return;
+        
+        const similarity = calculateSimilarity(item.title, otherItem.title);
+        if (similarity > 0.75) { // 相似度阈值 75%
+          group.duplicates.push(otherItem);
+          used.add(otherIndex);
+        }
+      });
+
+      grouped.push(group);
+      used.add(index);
+    });
+
+    return grouped;
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY);
@@ -218,64 +273,12 @@ const TrendRadar = ({ theme, toggleTheme }) => {
 
               {/* News List */}
               <div className="grid gap-4">
-                {group.items.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className="group relative bg-surface/40 border-l-2 border-surface hover:border-primary hover:bg-surface/80 transition-all duration-200 p-4"
-                  >
-                    {/* Rank Number */}
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-surface group-hover:bg-primary transition-colors"></div>
-                    
-                    <div className="flex gap-4 items-start">
-                      {/* ID Badge */}
-                      <div className="hidden md:flex flex-col items-center justify-center w-12 h-12 border border-dim/30 bg-void/50 text-dim font-display font-bold text-lg group-hover:text-primary group-hover:border-primary/50 transition-colors">
-                        {item.id.split('-')[1] || '00'}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        {/* Metadata Row */}
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-mono mb-2">
-                          <span className="text-tertiary uppercase">[{item.source}]</span>
-                          
-                          {item.rank !== '-' && (
-                            <span className={`px-1.5 py-0.5 font-bold ${item.rank === '1' || item.rank === '2' || item.rank === '3' ? 'bg-secondary text-void' : 'bg-dim/20 text-dim'}`}>
-                              RK:{item.rank}
-                            </span>
-                          )}
-                          
-                          {item.time && (
-                            <span className="text-dim flex items-center gap-1">
-                              <Clock size={10} /> {item.time}
-                            </span>
-                          )}
-                          
-                          {item.views && (
-                            <span className="text-dim">
-                              :: {item.views}
-                            </span>
-                          )}
-
-                          {item.isNew && (
-                            <span className="ml-auto bg-primary text-void text-[10px] font-bold px-2 py-0.5 uppercase animate-pulse">
-                              New_Signal
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Title */}
-                        <a href={item.url} target="_blank" rel="noopener noreferrer" className="block group-hover:translate-x-1 transition-transform duration-200">
-                          <h3 className="text-base md:text-lg font-bold text-bone group-hover:text-primary w-full">
-                            {item.title}
-                          </h3>
-                        </a>
-                      </div>
-                      
-                      {/* Link Icon */}
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity self-center text-primary">
-                         <ChevronRight />
-                      </div>
-                    </div>
-                  </div>
+                {groupSimilarItems(group.items).map((itemGroup, idx) => (
+                  <NewsItemGroup 
+                    key={`${group.id}-item-${idx}`}
+                    group={itemGroup}
+                    groupId={`${group.id}-${idx}`}
+                  />
                 ))}
               </div>
             </section>
@@ -302,6 +305,130 @@ const TrendRadar = ({ theme, toggleTheme }) => {
         </footer>
 
       </main>
+    </div>
+  );
+};
+
+// 可折叠的新闻项组件
+const NewsItemGroup = ({ group, groupId }) => {
+  const [expanded, setExpanded] = useState(false);
+  const hasDuplicates = group.duplicates.length > 0;
+  const item = group.mainItem;
+
+  return (
+    <div className="relative">
+      {/* 主新闻项 */}
+      <div 
+        className="group relative bg-surface/40 border-l-2 border-surface hover:border-primary hover:bg-surface/80 transition-all duration-200 p-4"
+      >
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-surface group-hover:bg-primary transition-colors"></div>
+        
+        <div className="flex gap-4 items-start">
+          {/* ID Badge */}
+          <div className="hidden md:flex flex-col items-center justify-center w-12 h-12 border border-dim/30 bg-void/50 text-dim font-display font-bold text-lg group-hover:text-primary group-hover:border-primary/50 transition-colors">
+            {item.id.split('-')[1] || '00'}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            {/* Metadata Row */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-mono mb-2">
+              <span className="text-tertiary uppercase">[{item.source}]</span>
+              
+              {item.rank !== '-' && (
+                <span className={`px-1.5 py-0.5 font-bold ${item.rank === '1' || item.rank === '2' || item.rank === '3' ? 'bg-secondary text-void' : 'bg-dim/20 text-dim'}`}>
+                  RK:{item.rank}
+                </span>
+              )}
+              
+              {item.time && (
+                <span className="text-dim flex items-center gap-1">
+                  <Clock size={10} /> {item.time}
+                </span>
+              )}
+              
+              {item.views && (
+                <span className="text-dim">
+                  :: {item.views}
+                </span>
+              )}
+
+              {item.isNew && (
+                <span className="ml-auto bg-primary text-void text-[10px] font-bold px-2 py-0.5 uppercase animate-pulse">
+                  New_Signal
+                </span>
+              )}
+
+              {/* 重复来源标识 */}
+              {hasDuplicates && (
+                <span className="bg-tertiary/20 text-tertiary text-[10px] font-bold px-2 py-0.5 uppercase border border-tertiary/30">
+                  +{group.duplicates.length} 来源
+                </span>
+              )}
+            </div>
+
+            {/* Title */}
+            <a href={item.url} target="_blank" rel="noopener noreferrer" className="block group-hover:translate-x-1 transition-transform duration-200">
+              <h3 className="text-base md:text-lg font-bold text-bone group-hover:text-primary w-full">
+                {item.title}
+              </h3>
+            </a>
+          </div>
+          
+          {/* 折叠按钮或链接图标 */}
+          <div className="self-center">
+            {hasDuplicates ? (
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="p-2 text-dim hover:text-primary transition-colors"
+                title={expanded ? "折叠" : "展开查看所有来源"}
+              >
+                <ChevronDown 
+                  size={20}
+                  className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+                />
+              </button>
+            ) : (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity text-primary">
+                <ChevronRight />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 折叠的重复项 */}
+      {hasDuplicates && expanded && (
+        <div className="ml-8 md:ml-16 mt-2 space-y-2 border-l-2 border-dim/30 pl-4">
+          {group.duplicates.map((dupItem, idx) => (
+            <div 
+              key={`${groupId}-dup-${idx}`}
+              className="bg-void/30 border border-dim/20 hover:border-dim/40 p-3 transition-all"
+            >
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-mono mb-1.5">
+                <span className="text-tertiary uppercase">[{dupItem.source}]</span>
+                {dupItem.rank !== '-' && (
+                  <span className="px-1.5 py-0.5 bg-dim/20 text-dim font-bold">
+                    RK:{dupItem.rank}
+                  </span>
+                )}
+                {dupItem.time && (
+                  <span className="text-dim flex items-center gap-1">
+                    <Clock size={10} /> {dupItem.time}
+                  </span>
+                )}
+                {dupItem.views && (
+                  <span className="text-dim">:: {dupItem.views}</span>
+                )}
+              </div>
+              <a href={dupItem.url} target="_blank" rel="noopener noreferrer" className="block hover:text-primary transition-colors">
+                <h4 className="text-sm text-bone/80 hover:text-primary">
+                  {dupItem.title}
+                </h4>
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
