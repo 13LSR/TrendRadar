@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/TrendRadar/', // IMPORTANT: Match your repo name
+  base: '/', // IMPORTANT: Match your repo name
   build: {
     outDir: 'dist',
     emptyOutDir: true
