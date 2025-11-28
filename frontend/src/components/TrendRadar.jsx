@@ -70,8 +70,9 @@ const TrendRadar = ({ theme, toggleTheme }) => {
     const handleScroll = () => setScrolled(window.scrollY);
     window.addEventListener('scroll', handleScroll);
     
-    // Fetch data
-    fetch('./data.json')
+    // Fetch data with cache busting timestamp
+    const timestamp = new Date().getTime();
+    fetch(`./data.json?t=${timestamp}`)
       .then(res => {
         if (!res.ok) throw new Error('Failed to load data');
         return res.json();
