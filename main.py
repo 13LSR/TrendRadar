@@ -1716,8 +1716,13 @@ def generate_html_report(
     report_data = prepare_report_data(stats, failed_ids, new_titles, id_to_name, mode)
 
     # === 新增: 保存 data.json 供 React 前端使用 ===
+    print(f"DEBUG: 准备生成 data.json... is_daily_summary={is_daily_summary}, mode={mode}")
+    print(f"DEBUG: stats数量: {len(stats)}")
+    print(f"DEBUG: 当前工作目录: {os.getcwd()}")
+
     if is_daily_summary:
         try:
+            print(f"DEBUG: 正在写入 data.json 到 {os.path.abspath('data.json')}")
             now = get_beijing_time()
             # 构建符合前端组件需求的 JSON 结构
             frontend_data = {
@@ -1805,7 +1810,7 @@ def generate_html_report(
             print("✅ 已生成前端数据文件: data.json")
             
         except Exception as e:
-            print(f"❌ 保存 data.json 失败: {e}")
+            print(f"❌ 保存 data.json 失败: {e!r}")
     # ===========================================
 
     html_content = render_html_content(
