@@ -656,7 +656,23 @@ def load_frequency_words(
     filter_words = []
 
     for group in word_groups:
-        words = [word.strip() for word in group.split("\n") if word.strip()]
+        # 按行分割，去除首尾空格
+        lines = [line.strip() for line in group.split("\n") if line.strip()]
+        
+        # 1. 尝试提取组名 (从第一行如果是注释 # 开始)
+        group_name = None
+        # 检查第一行是否是标题行 (例如: # ===== 科技前沿 =====)
+        if lines and lines[0].startswith("#"):
+            # 提取 # 之后的内容，去掉 = 号
+            clean_name = lines[0].lstrip("#").replace("=", "").strip()
+            if clean_name:
+                group_name = clean_name
+                print(f"✅ 提取到组名: {group_name}")
+            
+            # 将第一行从关键词列表中移除，避免被当做关键词搜索
+            words = lines[1:]
+        else:
+            words = lines
 
         group_required_words = []
         group_normal_words = []
@@ -664,6 +680,10 @@ def load_frequency_words(
         group_max_count = 0  # 默认不限制
 
         for word in words:
+            if word.startswith("#"): 
+                # 跳过组内的其他注释行
+                continue
+                
             if word.startswith("@"):
                 # 解析最大显示数量（只接受正整数）
                 try:
@@ -681,7 +701,10 @@ def load_frequency_words(
                 group_normal_words.append(word)
 
         if group_required_words or group_normal_words:
-            if group_normal_words:
+            # 确定组名(group_key)
+            if group_name:
+                group_key = group_name
+            elif group_normal_words:
                 group_key = " ".join(group_normal_words)
             else:
                 group_key = " ".join(group_required_words)
@@ -691,7 +714,7 @@ def load_frequency_words(
                     "required": group_required_words,
                     "normal": group_normal_words,
                     "group_key": group_key,
-                    "max_count": group_max_count,  # 新增字段
+                    "max_count": group_max_count,
                 }
             )
 
