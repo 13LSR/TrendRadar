@@ -1,0 +1,2661 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>热点新闻分析</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <style>
+            * { box-sizing: border-box; }
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+                margin: 0; 
+                padding: 16px; 
+                background: #fafafa;
+                color: #333;
+                line-height: 1.5;
+            }
+            
+            .container {
+                max-width: 600px;
+                margin: 0 auto;
+                background: white;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+            }
+            
+            .header {
+                background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+                color: white;
+                padding: 32px 24px;
+                text-align: center;
+                position: relative;
+            }
+            
+            .save-buttons {
+                position: absolute;
+                top: 16px;
+                right: 16px;
+                display: flex;
+                gap: 8px;
+            }
+            
+            .save-btn {
+                background: rgba(255, 255, 255, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                color: white;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 500;
+                transition: all 0.2s ease;
+                backdrop-filter: blur(10px);
+                white-space: nowrap;
+            }
+            
+            .save-btn:hover {
+                background: rgba(255, 255, 255, 0.3);
+                border-color: rgba(255, 255, 255, 0.5);
+                transform: translateY(-1px);
+            }
+            
+            .save-btn:active {
+                transform: translateY(0);
+            }
+            
+            .save-btn:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+            
+            .header-title {
+                font-size: 22px;
+                font-weight: 700;
+                margin: 0 0 20px 0;
+            }
+            
+            .header-info {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+                font-size: 14px;
+                opacity: 0.95;
+            }
+            
+            .info-item {
+                text-align: center;
+            }
+            
+            .info-label {
+                display: block;
+                font-size: 12px;
+                opacity: 0.8;
+                margin-bottom: 4px;
+            }
+            
+            .info-value {
+                font-weight: 600;
+                font-size: 16px;
+            }
+            
+            .content {
+                padding: 24px;
+            }
+            
+            .word-group {
+                margin-bottom: 40px;
+            }
+            
+            .word-group:first-child {
+                margin-top: 0;
+            }
+            
+            .word-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 20px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid #f0f0f0;
+            }
+            
+            .word-info {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            
+            .word-name {
+                font-size: 17px;
+                font-weight: 600;
+                color: #1a1a1a;
+            }
+            
+            .word-count {
+                color: #666;
+                font-size: 13px;
+                font-weight: 500;
+            }
+            
+            .word-count.hot { color: #dc2626; font-weight: 600; }
+            .word-count.warm { color: #ea580c; font-weight: 600; }
+            
+            .word-index {
+                color: #999;
+                font-size: 12px;
+            }
+            
+            .news-item {
+                margin-bottom: 20px;
+                padding: 16px 0;
+                border-bottom: 1px solid #f5f5f5;
+                position: relative;
+                display: flex;
+                gap: 12px;
+                align-items: center;
+            }
+            
+            .news-item:last-child {
+                border-bottom: none;
+            }
+            
+            .news-item.new::after {
+                content: "NEW";
+                position: absolute;
+                top: 12px;
+                right: 0;
+                background: #fbbf24;
+                color: #92400e;
+                font-size: 9px;
+                font-weight: 700;
+                padding: 3px 6px;
+                border-radius: 4px;
+                letter-spacing: 0.5px;
+            }
+            
+            .news-number {
+                color: #999;
+                font-size: 13px;
+                font-weight: 600;
+                min-width: 20px;
+                text-align: center;
+                flex-shrink: 0;
+                background: #f8f9fa;
+                border-radius: 50%;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                align-self: flex-start;
+                margin-top: 8px;
+            }
+            
+            .news-content {
+                flex: 1;
+                min-width: 0;
+                padding-right: 40px;
+            }
+            
+            .news-item.new .news-content {
+                padding-right: 50px;
+            }
+            
+            .news-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 8px;
+                flex-wrap: wrap;
+            }
+            
+            .source-name {
+                color: #666;
+                font-size: 12px;
+                font-weight: 500;
+            }
+            
+            .rank-num {
+                color: #fff;
+                background: #6b7280;
+                font-size: 10px;
+                font-weight: 700;
+                padding: 2px 6px;
+                border-radius: 10px;
+                min-width: 18px;
+                text-align: center;
+            }
+            
+            .rank-num.top { background: #dc2626; }
+            .rank-num.high { background: #ea580c; }
+            
+            .time-info {
+                color: #999;
+                font-size: 11px;
+            }
+            
+            .count-info {
+                color: #059669;
+                font-size: 11px;
+                font-weight: 500;
+            }
+            
+            .news-title {
+                font-size: 15px;
+                line-height: 1.4;
+                color: #1a1a1a;
+                margin: 0;
+            }
+            
+            .news-link {
+                color: #2563eb;
+                text-decoration: none;
+            }
+            
+            .news-link:hover {
+                text-decoration: underline;
+            }
+            
+            .news-link:visited {
+                color: #7c3aed;
+            }
+            
+            .new-section {
+                margin-top: 40px;
+                padding-top: 24px;
+                border-top: 2px solid #f0f0f0;
+            }
+            
+            .new-section-title {
+                color: #1a1a1a;
+                font-size: 16px;
+                font-weight: 600;
+                margin: 0 0 20px 0;
+            }
+            
+            .new-source-group {
+                margin-bottom: 24px;
+            }
+            
+            .new-source-title {
+                color: #666;
+                font-size: 13px;
+                font-weight: 500;
+                margin: 0 0 12px 0;
+                padding-bottom: 6px;
+                border-bottom: 1px solid #f5f5f5;
+            }
+            
+            .new-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 8px 0;
+                border-bottom: 1px solid #f9f9f9;
+            }
+            
+            .new-item:last-child {
+                border-bottom: none;
+            }
+            
+            .new-item-number {
+                color: #999;
+                font-size: 12px;
+                font-weight: 600;
+                min-width: 18px;
+                text-align: center;
+                flex-shrink: 0;
+                background: #f8f9fa;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .new-item-rank {
+                color: #fff;
+                background: #6b7280;
+                font-size: 10px;
+                font-weight: 700;
+                padding: 3px 6px;
+                border-radius: 8px;
+                min-width: 20px;
+                text-align: center;
+                flex-shrink: 0;
+            }
+            
+            .new-item-rank.top { background: #dc2626; }
+            .new-item-rank.high { background: #ea580c; }
+            
+            .new-item-content {
+                flex: 1;
+                min-width: 0;
+            }
+            
+            .new-item-title {
+                font-size: 14px;
+                line-height: 1.4;
+                color: #1a1a1a;
+                margin: 0;
+            }
+            
+            .error-section {
+                background: #fef2f2;
+                border: 1px solid #fecaca;
+                border-radius: 8px;
+                padding: 16px;
+                margin-bottom: 24px;
+            }
+            
+            .error-title {
+                color: #dc2626;
+                font-size: 14px;
+                font-weight: 600;
+                margin: 0 0 8px 0;
+            }
+            
+            .error-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .error-item {
+                color: #991b1b;
+                font-size: 13px;
+                padding: 2px 0;
+                font-family: 'SF Mono', Consolas, monospace;
+            }
+            
+            .footer {
+                margin-top: 32px;
+                padding: 20px 24px;
+                background: #f8f9fa;
+                border-top: 1px solid #e5e7eb;
+                text-align: center;
+            }
+            
+            .footer-content {
+                font-size: 13px;
+                color: #6b7280;
+                line-height: 1.6;
+            }
+            
+            .footer-link {
+                color: #4f46e5;
+                text-decoration: none;
+                font-weight: 500;
+                transition: color 0.2s ease;
+            }
+            
+            .footer-link:hover {
+                color: #7c3aed;
+                text-decoration: underline;
+            }
+            
+            .project-name {
+                font-weight: 600;
+                color: #374151;
+            }
+            
+            @media (max-width: 480px) {
+                body { padding: 12px; }
+                .header { padding: 24px 20px; }
+                .content { padding: 20px; }
+                .footer { padding: 16px 20px; }
+                .header-info { grid-template-columns: 1fr; gap: 12px; }
+                .news-header { gap: 6px; }
+                .news-content { padding-right: 45px; }
+                .news-item { gap: 8px; }
+                .new-item { gap: 8px; }
+                .news-number { width: 20px; height: 20px; font-size: 12px; }
+                .save-buttons {
+                    position: static;
+                    margin-bottom: 16px;
+                    display: flex;
+                    gap: 8px;
+                    justify-content: center;
+                    flex-direction: column;
+                    width: 100%;
+                }
+                .save-btn {
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="save-buttons">
+                    <button class="save-btn" onclick="saveAsImage()">保存为图片</button>
+                    <button class="save-btn" onclick="saveAsMultipleImages()">分段保存</button>
+                </div>
+                <div class="header-title">热点新闻分析</div>
+                <div class="header-info">
+                    <div class="info-item">
+                        <span class="info-label">报告类型</span>
+                        <span class="info-value">实时分析</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">新闻总数</span>
+                        <span class="info-value">521 条</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">热点新闻</span>
+                        <span class="info-value">106 条</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">生成时间</span>
+                        <span class="info-value">06-29 13:27</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content">
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">通用 AI 技术</div>
+                            <div class="word-count hot">34 条</div>
+                        </div>
+                        <div class="word-index">1/12</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num top">1</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f11b8-61b2-7aab-8c08-d39537ee1f86" target="_blank" class="news-link">Bank Indonesia senior deputy governor says the central bank will use all available tools to maintain liquidity.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num top">1</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3125876" target="_blank" class="news-link">韩国公布芯片、物理AI及AI数据中心领域的大型项目计划。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num top">2</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f11b7-84d4-7aab-8c08-cad3d4256935" target="_blank" class="news-link">Israel said its military destroyed an underground HEZBOLLAH tunnel more than 200 metres long in southern Lebanon.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">4</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num top">3</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260629130627114800" target="_blank" class="news-link">韩国总统李在明：需要比其他国家更快地确保人工智能要素发展。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">5</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num high">4</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f11b5-0a1a-7aab-8c08-bb5bbf0d61bd" target="_blank" class="news-link">RBC raised its 12-month S&amp;P 500 target to 8,150 from 7,900.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">6</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">6</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f11ae-f5d5-7aab-8c08-ac599b778d3a" target="_blank" class="news-link">HKEX filing shows Shengwei Shidai Technology Co., Ltd. has submitted a listing application to HKEX.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">7</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 最热</span><span class="rank-num ">6</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/articles/3775705" target="_blank" class="news-link">“央行中的央行”拉响AI泡沫警报：万亿美元资本支出狂潮恐演变为漫长崩盘</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">8</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">bilibili 热搜</span><span class="rank-num ">6</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://search.bilibili.com/all?keyword=%E6%B8%85%E5%8D%8E%E5%A7%9A%E7%8F%ADUP%E4%B8%BB%E8%AF%A6%E8%A7%A3AI%E4%B8%93%E4%B8%9A%E5%B0%B1%E4%B8%9A" target="_blank" class="news-link">清华姚班UP主详解AI专业就业</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">9</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">7</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260629130254110800" target="_blank" class="news-link">韩国宣布在芯片、物理人工智能和人工智能数据中心方面的重大项目计划。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">10</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">7</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7655594666130554921" target="_blank" class="news-link">白宫前脚下了限制令，OpenAI 后脚就把 GPT-5.6 发了</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">11</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">酷安</span><span class="rank-num ">8</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.coolapk.com/feed/72571073" target="_blank" class="news-link">本文长文，均为手打，无ai辅助，如不符合胃口、认为充满爹味可以滑走</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">12</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">10</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f118d-96d8-7aab-8c08-8a2ca3171b47" target="_blank" class="news-link">ByteDance denies plans to adopt Baidu’s Kunlun AI chip; Kunlun reportedly eyeing Hong Kong IPO, Tencent a client</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">13</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">10</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7656050265522913280" target="_blank" class="news-link">AI 乱改代码？试试这套 SDD 规范驱动工作流</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">14</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">11</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f1185-6a44-7aab-8c08-86bd54540d96" target="_blank" class="news-link">Malaysia&#x27;s economy minister said rice supplies are sufficient to last 5-6 months, and supplies of chicken, eggs, fish and fruit are at least adequate for one month.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">15</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">11</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7655097833112518666" target="_blank" class="news-link">未来，什么才是 AI“正确的使用方式”</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">16</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">12</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f1184-2bd1-7aab-8c08-7aa029831ccc" target="_blank" class="news-link">Malaysia&#x27;s economic minister said fuel supplies are adequate to last through the end of August.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">17</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">13</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f1180-c4a6-7aab-8c08-76559f0c8707" target="_blank" class="news-link">Malaysia&#x27;s economy minister said fertilizer costs are expected to rise 15-20% and livestock feed costs about 8%.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">18</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">参考消息</span><span class="rank-num ">14</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://ckxxapp.ckxx.net/pages/2026/06/28/ebc18ea934684d5aa502ba03604666d1.html" target="_blank" class="news-link">普华永道：AI热潮推动全球巨额并购激增</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">19</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">15</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f117a-a0d1-7aab-8c08-60d7a5e73ab8" target="_blank" class="news-link">Thai Automotive Industry Association said Thailand&#x27;s domestic vehicle sales rose 10.6% YoY in May, versus 2.54% growth in April.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">20</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">16</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f1178-f96f-7aab-8c08-5efdf99d46b4" target="_blank" class="news-link">Japan drafts economic blueprint aiming to double real growth to over 1% by 2040</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">21</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">17</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f1175-cf16-7aab-8c08-56557fd25540" target="_blank" class="news-link">Hang Seng Tech Index extended gains in morning trade, rising more than 4% by mid-session.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">22</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">17</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/969/829.htm" target="_blank" class="news-link">芬兰计划到 2031 年用 AI 全面改造公共部门，将取代部分员工</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">23</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">19</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f1171-df64-7aab-8c08-450f78de8e63" target="_blank" class="news-link">Thai Automotive Industry Association: Thailand&#x27;s vehicle production rose 17.94% YoY in May (April: -2.69%).</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">24</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">21</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-29/%E7%BE%8E%E5%9B%BDai%E4%BA%A7%E4%B8%9A%E8%A2%AB%E6%8C%87%E9%9C%80%E9%81%BF%E5%85%8D%E9%87%8D%E8%B9%88%E4%B8%AD%E5%9B%BD%E9%A9%AC%E4%BA%91%E5%BC%8F%E7%9B%91%E7%AE%A1%E8%A6%86%E8%BE%99-dcae2e" target="_blank" class="news-link">美国AI产业被指需避免重蹈中国马云式监管覆辙</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">25</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">22</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7655821588533657627" target="_blank" class="news-link">大多数人不是在使用 AI 赚钱，而是在帮 AI 公司赚钱</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">26</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">24</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f116f-1574-7aab-8c08-1917040ba7a5" target="_blank" class="news-link">June 27-28: PLA Southern Theater conducted routine naval and air patrols in South China Sea</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">27</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">24</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7656055019972722731" target="_blank" class="news-link">如何让 AI 快速搭建一套生产 Agent ？全面理解 Agent 架构。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">28</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">26</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7656384927139102772" target="_blank" class="news-link">我从 0 开发的 AI Agent 智语项目发布了</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">29</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">27</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f116e-473b-7aab-8c08-004b787e2e41" target="_blank" class="news-link">At the morning session close, China&#x27;s front-month commodity futures were mostly higher: palladium up nearly 4%, live hogs up over 3%, platinum up nearly 3%. Fiberboard, lithium carbonate, coking coal, Shanghai silver, red dates and Shanghai zinc rose more than 2%. Lagging contracts included SC crude oil down over 2%, synthetic rubber down nearly 2%, japonica rice, 20# rubber and PVC down more than 1%, and caustic soda down nearly 1%.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">30</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">27</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7656080006646497307" target="_blank" class="news-link">Main-safe：现代Android 架构真正的分水岭</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">31</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">28</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019f116c-9fa0-7aab-8c07-fc369b3c6f57" target="_blank" class="news-link">Hong Kong tech stocks extended gains: Bilibili (09626.HK) rose more than 8%, Baidu (09888.HK) rose over 7%; JD.com (09618.HK) and Meituan (03690.HK) also climbed.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">32</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">28</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7656050265523372032" target="_blank" class="news-link">AI具身交互：实现一个会说话的3D虚拟伴侣</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">33</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">29</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-29/%E5%9B%BD%E9%99%85%E6%B8%85%E7%AE%97%E9%93%B6%E8%A1%8C%E8%AD%A6%E5%91%8Aai%E6%8A%95%E8%B5%84%E8%BF%87%E7%83%AD%E4%B8%8E%E5%85%AC%E5%80%BA%E9%AB%98%E6%B6%A8%E5%A8%81%E8%83%81%E5%85%A8%E7%90%83%E7%BB%8F%E6%B5%8E-90c37b" target="_blank" class="news-link">国际清算银行警告AI投资过热与公债高涨威胁全球经济</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">34</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">30</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260629115639400800" target="_blank" class="news-link">金十数据整理：每日人工智能动态汇总（2026-06-29）</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">科技前沿</div>
+                            <div class="word-count hot">19 条</div>
+                        </div>
+                        <div class="word-index">2/12</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 最热</span><span class="rank-num top">1</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/articles/3775686" target="_blank" class="news-link">本周重磅日程：美国非农、中国PMI、沃什出席欧洲央行论坛，半导体“7月涨价潮”</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num top">2</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260629130651721800" target="_blank" class="news-link">韩国总统李在明：必须尽快完成芯片生产建设。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num high">5</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/SH600584" target="_blank" class="news-link">长电科技</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">4</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">6</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-29/%E6%99%BA%E5%85%83%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%AC%AC15000%E5%8F%B0%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%8B%E7%BA%BF-376cbe" target="_blank" class="news-link">智元机器人第15000台具身智能机器人下线</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">5</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">6</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3125870" target="_blank" class="news-link">据港交所文件显示，盛威時代科技股份有限公司向港交所提交上市申请书。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">6</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 最热</span><span class="rank-num ">8</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/articles/3775715" target="_blank" class="news-link">“买券商等于买一篮子打折科技股”交易逻辑发酵，券商股上演价值重估行情</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">7</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num ">10</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/SZ000988" target="_blank" class="news-link">华工科技</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">8</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">酷安</span><span class="rank-num ">13</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.coolapk.com/feed/72561201" target="_blank" class="news-link">#酷安夜话#  相完亲了，问我收入多少，是不是有车有房，我说都没买呢，她问我彩礼打算给多少，我说这个得看买房买车预算，再决定彩礼多少，女方专科 护士岗位，每个月5500，我目前大概每个月2W，半导体行业，女方要求彩礼28.8 婚前需要我出首付，加上她名字，代步车不低于15万，3金预算3万。😑😑😑，目前版本进化的这么快吗？老哥们遇到的都是啥样的。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">9</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">参考消息</span><span class="rank-num ">15</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://ckxxapp.ckxx.net/pages/2026/06/28/2bfe6cdeb7bf4c7a8f848829b9da522f.html" target="_blank" class="news-link">外媒：苹果因内存芯片短缺大幅提高平板电脑价格</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">10</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">16</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260629124138155800" target="_blank" class="news-link">据港交所文件：盛威時代科技股份有限公司向港交所提交上市申请书。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">11</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">17</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-29/spacex%E5%B0%86%E7%BA%B3%E5%85%A5%E9%82%A3%E6%96%AF%E8%BE%BE%E5%85%8B100%E6%8C%87%E6%95%B0-%E8%A2%AB%E5%8A%A8%E8%B5%84%E9%87%91%E6%96%99%E6%B6%8C%E5%85%A5-5b79ad" target="_blank" class="news-link">SpaceX将纳入那斯达克100指数 被动资金料涌入</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">12</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num ">17</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/SZ002409" target="_blank" class="news-link">雅克科技</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">13</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">19</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3125854" target="_blank" class="news-link">恒生科技指数日内涨超4%。地平线机器人涨超15%，哔哩哔哩涨超8%，携程、百度、美团涨超7%。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">14</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">19</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260629123641635800" target="_blank" class="news-link">智元机器人入股机器人力传感器研发商蓝点触控</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">15</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num ">20</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/SH688008" target="_blank" class="news-link">澜起科技</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">16</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">参考消息</span><span class="rank-num ">21</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://ckxxapp.ckxx.net/pages/2026/06/27/b87758a5cf2f461cb45f7238508fd52a.html" target="_blank" class="news-link">法媒：中国构建更具科技含量的农业体系</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">17</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num ">22</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/SZ300476" target="_blank" class="news-link">胜宏科技</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">18</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">26</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3125842" target="_blank" class="news-link">恒生指数涨幅扩大至2%，恒生科技指数现涨3.4%，恒生生物科技指数涨超7%。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">19</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num ">26</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/SZ000021" target="_blank" class="news-link">深科技</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">宏观经济</div>
+                            <div class="word-count hot">15 条</div>
+                        </div>
+                        <div class="word-index">3/12</div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">凤凰网</span><span class="rank-num top">2</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://news.ifeng.com/c/8uLOs38oapM" target="_blank" class="news-link">日菲“专属经济区划界谈判”无效，中国维权合理合法</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 最热</span><span class="rank-num top">3</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/articles/3775701" target="_blank" class="news-link">美股近一个月触发7次，“兴登堡预兆”有多准？A股准确率高达92%！</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num top">3</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3125874" target="_blank" class="news-link">3000亿元隔夜逆回购“首秀”未披露价格，市场人士：央行有意防止政策信号被过度解读</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">4</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num high">4</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260629130549451800" target="_blank" class="news-link">3000亿元隔夜逆回购“首秀”未披露价格，市场人士：央行有意防止政策信号被过度解读</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">5</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num high">5</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-29/%E7%99%BE%E5%BA%A6%E6%97%97%E4%B8%8B%E6%98%86%E4%BB%91%E8%8A%AF%E6%8B%9F%E8%B5%B4%E6%B8%AF%E4%B8%8A%E5%B8%82%E4%BC%B0%E5%80%BC500%E4%BA%BF%E7%BE%8E%E5%85%83-aab0ab" target="_blank" class="news-link">百度旗下昆仑芯拟赴港上市估值500亿美元</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">6</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">澎湃新闻</span><span class="rank-num ">7</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://m.thepaper.cn/newsDetail_forward_33471842" target="_blank" class="news-link">观察｜日菲“专属经济区划界谈判”无效，中国维权合理合法</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">7</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 最热</span><span class="rank-num ">9</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/articles/3775714" target="_blank" class="news-link">明修栈道暗度陈仓！沃什为9月“降息”铺路？</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">8</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">卫星通讯社</span><span class="rank-num ">10</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://sputniknews.cn/20260629/1072095230.html" target="_blank" class="news-link">国际清算银行：全球经济面临多重“压力点”，或威胁金融稳定</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">9</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">11</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260629125157614800" target="_blank" class="news-link">印尼央行高级副行长：将通过所有工具维持流动性。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">10</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">12</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-29/%E8%91%97%E5%90%8D%E7%BB%8F%E6%B5%8E%E5%AD%A6%E5%AE%B6%E7%8E%8B%E6%B4%9B%E6%9E%97%E9%80%9D%E4%B8%96-%E4%BA%AB%E5%B9%B488%E5%B2%81-81c655" target="_blank" class="news-link">著名经济学家王洛林逝世 享年88岁</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">11</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">15</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3125859" target="_blank" class="news-link">LNG船货“跨境通”首单落地，油气贸易人民币结算再拓新场景</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">12</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">参考消息</span><span class="rank-num ">16</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://ckxxapp.ckxx.net/pages/2026/06/28/6d2eb5abf8714f8b840980f90d0414b0.html" target="_blank" class="news-link">外媒：脱欧令英国股市经历“失去的十年”</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">13</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">澎湃新闻</span><span class="rank-num ">17</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://m.thepaper.cn/newsDetail_forward_33473686" target="_blank" class="news-link">十大券商看后市｜A股相对外盘走势更具韧性，短期关注再平衡</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">14</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">知乎</span><span class="rank-num ">17</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.zhihu.com/question/2053870272458100869" target="_blank" class="news-link">中国有巨大贸易顺差，人民币国际化又需要开放人民币，这两者如何调和？</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">15</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">18</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260629123942132800" target="_blank" class="news-link">两周不到重回70美元，油价新一轮危险正在降临！</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">时政要闻</div>
+                            <div class="word-count hot">13 条</div>
+                        </div>
+                        <div class="word-index">4/12</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">卫星通讯社</span><span class="rank-num top">2</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://sputniknews.cn/20260629/1072096776.html" target="_blank" class="news-link">土耳其外交部：以色列承认奥斯曼帝国对亚美尼亚人实施种族灭绝有政治目的</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">卫星通讯社</span><span class="rank-num high">4</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://sputniknews.cn/20260629/1072096399.html" target="_blank" class="news-link">中国解放军南宁舰和衡阳舰将赴香港组织开放参观交流活动</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num high">4</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3125872" target="_blank" class="news-link">四川宜宾高县发生5.5级地震，国务院抗震救灾指挥部办公室、应急管理部启动国家地震灾害四级应急响应，派出工作组赶赴震区指导抗震救灾工作。（新华社）</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">4</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">知乎</span><span class="rank-num high">5</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.zhihu.com/question/2051413400576693156" target="_blank" class="news-link">为什么香港的冲厕水是咸的？</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">5</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">7</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/969/884.htm" target="_blank" class="news-link">任天堂（香港）：Switch 2 游戏机建议售价自 9 月 1 日起上调至 3700 港币</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">6</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">凤凰网</span><span class="rank-num ">12</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://news.ifeng.com/c/8uLUKnUl404" target="_blank" class="news-link">中俄再次联合空中战略巡航，专家：呈现两大特点</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">7</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">13</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-29/%E9%9F%A9%E8%82%A1%E6%9D%A0%E6%9D%86etf%E5%BC%95%E5%8F%91%E5%B7%A8%E9%9C%87-%E5%8F%B0%E6%B9%BE%E8%AF%81%E4%BA%A4%E6%89%80%E7%A7%B0%E4%B8%8D%E8%80%83%E8%99%91%E5%BC%80%E6%94%BE-ecc232" target="_blank" class="news-link">韩股杠杆ETF引发巨震 台湾证交所称不考虑开放</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">8</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">13</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260629124925272800" target="_blank" class="news-link">国务院抗震救灾指挥部办公室、应急管理部派出工作组赶赴四川宜宾震区</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">9</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">参考消息</span><span class="rank-num ">24</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://ckxxapp.ckxx.net/pages/2026/06/27/2c0b644aad8d4630bbe4757c215044a1.html" target="_blank" class="news-link">美媒：从中国电池厂看中美技术博弈变局</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">10</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">今日头条</span><span class="rank-num ">25</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.toutiao.com/trending/7656092063277039654/" target="_blank" class="news-link">小S在香港被偶遇</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">11</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">参考消息</span><span class="rank-num ">25</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://ckxxapp.ckxx.net/pages/2026/06/27/bd7c70ad69b04471a11afb2a81117c97.html" target="_blank" class="news-link">西班牙议员：中欧合作“具备战略必要性”</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">12</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">25</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-29/%E4%B8%AD%E5%9B%BD%E6%B0%91%E6%97%8F%E5%9B%A2%E7%BB%93%E6%B3%957%E6%9C%88%E4%B8%8A%E8%B7%AF-%E6%9D%8E%E6%98%8E%E5%93%B2%E7%A7%B0%E6%8C%91%E6%88%98%E5%8F%B0%E6%B9%BE%E6%B0%91%E4%B8%BB-4c6a9a" target="_blank" class="news-link">中国民族团结法7月上路 李明哲称挑战台湾民主</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">13</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">百度热搜</span><span class="rank-num ">29</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.baidu.com/s?wd=%E4%B8%AD%E4%BF%84%E8%81%94%E5%90%88%E5%B7%A1%E8%88%AA%E9%98%B5%E5%AE%B9%E5%BC%BA%E5%A4%A7+%E6%97%A5%E6%9C%AC%E6%85%8C%E4%BA%86%EF%BC%9F" target="_blank" class="news-link">中俄联合巡航阵容强大 日本慌了？</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">大模型 &amp; AI</div>
+                            <div class="word-count warm">7 条</div>
+                        </div>
+                        <div class="word-index">5/12</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num top">3</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/969/888.htm" target="_blank" class="news-link">北京太空算力创新中心揭牌成立，统筹组织星载 AI 芯片、太空大模型等联合研发</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 最热</span><span class="rank-num high">4</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/articles/3775694" target="_blank" class="news-link">算力告急：谷歌悄然对Meta实施Gemini使用上限</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 最热</span><span class="rank-num high">5</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/articles/3775696" target="_blank" class="news-link">美国科技企业悄然转向中国AI模型，Coinbase带头用上GLM与Kimi</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">4</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">8</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/969/883.htm" target="_blank" class="news-link">月之暗面 Kimi：所有融资活动仅由公司直接负责，已发现部分机构和个人涉嫌欺诈</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">5</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">13</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7655515848211841076" target="_blank" class="news-link">AI 设计工作流全景拆解：Figma MCP / Claude Design / Codex / Google Stitch</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">6</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">19</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7636046219455447074" target="_blank" class="news-link">Claude Code 从入门到精通，一步到位</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">7</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">21</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7655637257310797850" target="_blank" class="news-link">调查研究-200 llama.cpp b9754：一次很小但很关键的 Agent 工具调用修复</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">中美科技巨头</div>
+                            <div class="word-count ">4 条</div>
+                        </div>
+                        <div class="word-index">6/12</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num high">5</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/969/886.htm" target="_blank" class="news-link">苹果 2027 年产品线曝光，消息称 iPhone 19 Pro 系列、Ultra 2 阔折叠已开模测试</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">酷安</span><span class="rank-num ">7</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.coolapk.com/feed/72546384" target="_blank" class="news-link">曝美光高管吐槽苹果把成本压力成倍转嫁给用户</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">酷安</span><span class="rank-num ">11</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.coolapk.com/feed/72558382" target="_blank" class="news-link">5月国内手机市场份额曝光：华为苹果OPPO前三</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">4</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">酷安</span><span class="rank-num ">12</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.coolapk.com/feed/72561663" target="_blank" class="news-link">iPhone 17系列中国区最新销量曝光：已超3558万台</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">国产硬科技</div>
+                            <div class="word-count ">3 条</div>
+                        </div>
+                        <div class="word-index">7/12</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">酷安</span><span class="rank-num top">2</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.coolapk.com/feed/72565674" target="_blank" class="news-link">在把用了3年的老款MatePadPro13.2更新后，我终于再次拥有最顶的华为全家桶了，Mate80RS+PuraXMax+MatePadProMax+freeclip2+freebudsPro5+watch5+Fit5Pro，可以说除了笔记本都拉满了，在深度体验后，全员鸿蒙6的生态体验真实优势和不足分享给大家！</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">酷安</span><span class="rank-num ">10</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.coolapk.com/feed/72568572" target="_blank" class="news-link">谁懂华为一键登录的含金量[流汗滑稽]</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">10</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/969/873.htm" target="_blank" class="news-link">华为 Mate 40 Pro 鸿蒙 NEXT 测试机曝光，系统基于 OpenHarmony 4.1 打造</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">比亚迪 王传福</div>
+                            <div class="word-count ">3 条</div>
+                        </div>
+                        <div class="word-index">8/12</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">12</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/969/863.htm" target="_blank" class="news-link">比亚迪全新腾势 Z9GT 首次 OTA：新增智能防晕车等功能</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">16</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/969/836.htm" target="_blank" class="news-link">比亚迪领汇 M9 商务旗舰 MPV 配置信息公开，官方指导价 18.88 万元起</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">今日头条</span><span class="rank-num ">20</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.toutiao.com/trending/7656616192316018218/" target="_blank" class="news-link">博主：比亚迪赢了销量却输给资本</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">航天</div>
+                            <div class="word-count ">3 条</div>
+                        </div>
+                        <div class="word-index">9/12</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num top">1</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/969/891.htm" target="_blank" class="news-link">我国轻舟试验飞船第二批在轨试验成果发布，把压缩机冰箱带上天</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num top">2</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3125875" target="_blank" class="news-link">轻舟试验飞船第二批在轨试验成果发布</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">6</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260629130303939800" target="_blank" class="news-link">轻舟试验飞船第二批在轨试验成果发布</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">DeepSeek 梁文锋</div>
+                            <div class="word-count ">2 条</div>
+                        </div>
+                        <div class="word-index">10/12</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">12</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7655691054172700718" target="_blank" class="news-link">DSpark 讲透：DeepSeek 不换模型，硬把 V4 提速 85%，是怎么做到的？</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">16</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7656300675647373321" target="_blank" class="news-link">DeepSeek这次招得太猛了，36个岗位，80%都要会Agent！</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">字节跳动 ByteDance 张一鸣 Seed</div>
+                            <div class="word-count ">2 条</div>
+                        </div>
+                        <div class="word-index">11/12</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">13</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3125861" target="_blank" class="news-link">字节跳动考虑合作百度昆仑芯？接近人士回应</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">26</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260629120508983800" target="_blank" class="news-link">字节跳动考虑合作百度昆仑芯？接近人士回应</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">Claude Anthropic</div>
+                            <div class="word-count ">1 条</div>
+                        </div>
+                        <div class="word-index">12/12</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">26</span><span class="time-info">13时27分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-29/anthropic%E8%8E%B7%E5%87%86%E5%90%91%E5%90%88%E4%BD%9C%E4%BC%99%E4%BC%B4%E5%8F%91%E5%B8%83mythos%E6%A8%A1%E5%9E%8B-874f0f" target="_blank" class="news-link">Anthropic获准向合作伙伴发布Mythos模型</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="new-section">
+                    <div class="new-section-title">本次新增热点 (共 82 条)</div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">今日头条 · 2条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank ">20</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.toutiao.com/trending/7656616192316018218/" target="_blank" class="news-link">博主：比亚迪赢了销量却输给资本</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank ">25</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.toutiao.com/trending/7656092063277039654/" target="_blank" class="news-link">小S在香港被偶遇</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">百度热搜 · 1条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank ">29</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.baidu.com/s?wd=%E4%B8%AD%E4%BF%84%E8%81%94%E5%90%88%E5%B7%A1%E8%88%AA%E9%98%B5%E5%AE%B9%E5%BC%BA%E5%A4%A7+%E6%97%A5%E6%9C%AC%E6%85%8C%E4%BA%86%EF%BC%9F" target="_blank" class="news-link">中俄联合巡航阵容强大 日本慌了？</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">澎湃新闻 · 2条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank ">7</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://m.thepaper.cn/newsDetail_forward_33471842" target="_blank" class="news-link">观察｜日菲“专属经济区划界谈判”无效，中国维权合理合法</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank ">17</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://m.thepaper.cn/newsDetail_forward_33473686" target="_blank" class="news-link">十大券商看后市｜A股相对外盘走势更具韧性，短期关注再平衡</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">凤凰网 · 1条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank ">12</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://news.ifeng.com/c/8uLUKnUl404" target="_blank" class="news-link">中俄再次联合空中战略巡航，专家：呈现两大特点</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">卫星通讯社 · 3条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank top">2</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://sputniknews.cn/20260629/1072096776.html" target="_blank" class="news-link">土耳其外交部：以色列承认奥斯曼帝国对亚美尼亚人实施种族灭绝有政治目的</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank high">4</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://sputniknews.cn/20260629/1072096399.html" target="_blank" class="news-link">中国解放军南宁舰和衡阳舰将赴香港组织开放参观交流活动</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">3</div>
+                            <div class="new-item-rank ">10</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://sputniknews.cn/20260629/1072095230.html" target="_blank" class="news-link">国际清算银行：全球经济面临多重“压力点”，或威胁金融稳定</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">MKT新闻 · 15条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank top">1</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f11b8-61b2-7aab-8c08-d39537ee1f86" target="_blank" class="news-link">Bank Indonesia senior deputy governor says the central bank will use all available tools to maintain liquidity.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank top">2</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f11b7-84d4-7aab-8c08-cad3d4256935" target="_blank" class="news-link">Israel said its military destroyed an underground HEZBOLLAH tunnel more than 200 metres long in southern Lebanon.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">3</div>
+                            <div class="new-item-rank high">4</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f11b5-0a1a-7aab-8c08-bb5bbf0d61bd" target="_blank" class="news-link">RBC raised its 12-month S&amp;P 500 target to 8,150 from 7,900.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">4</div>
+                            <div class="new-item-rank ">6</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f11ae-f5d5-7aab-8c08-ac599b778d3a" target="_blank" class="news-link">HKEX filing shows Shengwei Shidai Technology Co., Ltd. has submitted a listing application to HKEX.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">5</div>
+                            <div class="new-item-rank ">10</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f118d-96d8-7aab-8c08-8a2ca3171b47" target="_blank" class="news-link">ByteDance denies plans to adopt Baidu’s Kunlun AI chip; Kunlun reportedly eyeing Hong Kong IPO, Tencent a client</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">6</div>
+                            <div class="new-item-rank ">11</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f1185-6a44-7aab-8c08-86bd54540d96" target="_blank" class="news-link">Malaysia&#x27;s economy minister said rice supplies are sufficient to last 5-6 months, and supplies of chicken, eggs, fish and fruit are at least adequate for one month.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">7</div>
+                            <div class="new-item-rank ">12</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f1184-2bd1-7aab-8c08-7aa029831ccc" target="_blank" class="news-link">Malaysia&#x27;s economic minister said fuel supplies are adequate to last through the end of August.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">8</div>
+                            <div class="new-item-rank ">13</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f1180-c4a6-7aab-8c08-76559f0c8707" target="_blank" class="news-link">Malaysia&#x27;s economy minister said fertilizer costs are expected to rise 15-20% and livestock feed costs about 8%.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">9</div>
+                            <div class="new-item-rank ">15</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f117a-a0d1-7aab-8c08-60d7a5e73ab8" target="_blank" class="news-link">Thai Automotive Industry Association said Thailand&#x27;s domestic vehicle sales rose 10.6% YoY in May, versus 2.54% growth in April.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">10</div>
+                            <div class="new-item-rank ">16</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f1178-f96f-7aab-8c08-5efdf99d46b4" target="_blank" class="news-link">Japan drafts economic blueprint aiming to double real growth to over 1% by 2040</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">11</div>
+                            <div class="new-item-rank ">17</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f1175-cf16-7aab-8c08-56557fd25540" target="_blank" class="news-link">Hang Seng Tech Index extended gains in morning trade, rising more than 4% by mid-session.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">12</div>
+                            <div class="new-item-rank ">19</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f1171-df64-7aab-8c08-450f78de8e63" target="_blank" class="news-link">Thai Automotive Industry Association: Thailand&#x27;s vehicle production rose 17.94% YoY in May (April: -2.69%).</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">13</div>
+                            <div class="new-item-rank ">24</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f116f-1574-7aab-8c08-1917040ba7a5" target="_blank" class="news-link">June 27-28: PLA Southern Theater conducted routine naval and air patrols in South China Sea</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">14</div>
+                            <div class="new-item-rank ">27</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f116e-473b-7aab-8c08-004b787e2e41" target="_blank" class="news-link">At the morning session close, China&#x27;s front-month commodity futures were mostly higher: palladium up nearly 4%, live hogs up over 3%, platinum up nearly 3%. Fiberboard, lithium carbonate, coking coal, Shanghai silver, red dates and Shanghai zinc rose more than 2%. Lagging contracts included SC crude oil down over 2%, synthetic rubber down nearly 2%, japonica rice, 20# rubber and PVC down more than 1%, and caustic soda down nearly 1%.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">15</div>
+                            <div class="new-item-rank ">28</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019f116c-9fa0-7aab-8c07-fc369b3c6f57" target="_blank" class="news-link">Hong Kong tech stocks extended gains: Bilibili (09626.HK) rose more than 8%, Baidu (09888.HK) rose over 7%; JD.com (09618.HK) and Meituan (03690.HK) also climbed.</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">靠谱新闻 · 8条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank high">5</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-29/%E7%99%BE%E5%BA%A6%E6%97%97%E4%B8%8B%E6%98%86%E4%BB%91%E8%8A%AF%E6%8B%9F%E8%B5%B4%E6%B8%AF%E4%B8%8A%E5%B8%82%E4%BC%B0%E5%80%BC500%E4%BA%BF%E7%BE%8E%E5%85%83-aab0ab" target="_blank" class="news-link">百度旗下昆仑芯拟赴港上市估值500亿美元</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank ">12</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-29/%E8%91%97%E5%90%8D%E7%BB%8F%E6%B5%8E%E5%AD%A6%E5%AE%B6%E7%8E%8B%E6%B4%9B%E6%9E%97%E9%80%9D%E4%B8%96-%E4%BA%AB%E5%B9%B488%E5%B2%81-81c655" target="_blank" class="news-link">著名经济学家王洛林逝世 享年88岁</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">3</div>
+                            <div class="new-item-rank ">13</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-29/%E9%9F%A9%E8%82%A1%E6%9D%A0%E6%9D%86etf%E5%BC%95%E5%8F%91%E5%B7%A8%E9%9C%87-%E5%8F%B0%E6%B9%BE%E8%AF%81%E4%BA%A4%E6%89%80%E7%A7%B0%E4%B8%8D%E8%80%83%E8%99%91%E5%BC%80%E6%94%BE-ecc232" target="_blank" class="news-link">韩股杠杆ETF引发巨震 台湾证交所称不考虑开放</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">4</div>
+                            <div class="new-item-rank ">17</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-29/spacex%E5%B0%86%E7%BA%B3%E5%85%A5%E9%82%A3%E6%96%AF%E8%BE%BE%E5%85%8B100%E6%8C%87%E6%95%B0-%E8%A2%AB%E5%8A%A8%E8%B5%84%E9%87%91%E6%96%99%E6%B6%8C%E5%85%A5-5b79ad" target="_blank" class="news-link">SpaceX将纳入那斯达克100指数 被动资金料涌入</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">5</div>
+                            <div class="new-item-rank ">21</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-29/%E7%BE%8E%E5%9B%BDai%E4%BA%A7%E4%B8%9A%E8%A2%AB%E6%8C%87%E9%9C%80%E9%81%BF%E5%85%8D%E9%87%8D%E8%B9%88%E4%B8%AD%E5%9B%BD%E9%A9%AC%E4%BA%91%E5%BC%8F%E7%9B%91%E7%AE%A1%E8%A6%86%E8%BE%99-dcae2e" target="_blank" class="news-link">美国AI产业被指需避免重蹈中国马云式监管覆辙</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">6</div>
+                            <div class="new-item-rank ">25</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-29/%E4%B8%AD%E5%9B%BD%E6%B0%91%E6%97%8F%E5%9B%A2%E7%BB%93%E6%B3%957%E6%9C%88%E4%B8%8A%E8%B7%AF-%E6%9D%8E%E6%98%8E%E5%93%B2%E7%A7%B0%E6%8C%91%E6%88%98%E5%8F%B0%E6%B9%BE%E6%B0%91%E4%B8%BB-4c6a9a" target="_blank" class="news-link">中国民族团结法7月上路 李明哲称挑战台湾民主</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">7</div>
+                            <div class="new-item-rank ">26</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-29/anthropic%E8%8E%B7%E5%87%86%E5%90%91%E5%90%88%E4%BD%9C%E4%BC%99%E4%BC%B4%E5%8F%91%E5%B8%83mythos%E6%A8%A1%E5%9E%8B-874f0f" target="_blank" class="news-link">Anthropic获准向合作伙伴发布Mythos模型</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">8</div>
+                            <div class="new-item-rank ">29</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-29/%E5%9B%BD%E9%99%85%E6%B8%85%E7%AE%97%E9%93%B6%E8%A1%8C%E8%AD%A6%E5%91%8Aai%E6%8A%95%E8%B5%84%E8%BF%87%E7%83%AD%E4%B8%8E%E5%85%AC%E5%80%BA%E9%AB%98%E6%B6%A8%E5%A8%81%E8%83%81%E5%85%A8%E7%90%83%E7%BB%8F%E6%B5%8E-90c37b" target="_blank" class="news-link">国际清算银行警告AI投资过热与公债高涨威胁全球经济</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">华尔街见闻 最热 · 3条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank top">1</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/articles/3775686" target="_blank" class="news-link">本周重磅日程：美国非农、中国PMI、沃什出席欧洲央行论坛，半导体“7月涨价潮”</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank ">8</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/articles/3775715" target="_blank" class="news-link">“买券商等于买一篮子打折科技股”交易逻辑发酵，券商股上演价值重估行情</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">3</div>
+                            <div class="new-item-rank ">9</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/articles/3775714" target="_blank" class="news-link">明修栈道暗度陈仓！沃什为9月“降息”铺路？</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">华尔街见闻 快讯 · 9条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank top">1</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3125876" target="_blank" class="news-link">韩国公布芯片、物理AI及AI数据中心领域的大型项目计划。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank top">2</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3125875" target="_blank" class="news-link">轻舟试验飞船第二批在轨试验成果发布</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">3</div>
+                            <div class="new-item-rank top">3</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3125874" target="_blank" class="news-link">3000亿元隔夜逆回购“首秀”未披露价格，市场人士：央行有意防止政策信号被过度解读</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">4</div>
+                            <div class="new-item-rank high">4</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3125872" target="_blank" class="news-link">四川宜宾高县发生5.5级地震，国务院抗震救灾指挥部办公室、应急管理部启动国家地震灾害四级应急响应，派出工作组赶赴震区指导抗震救灾工作。（新华社）</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">5</div>
+                            <div class="new-item-rank ">6</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3125870" target="_blank" class="news-link">据港交所文件显示，盛威時代科技股份有限公司向港交所提交上市申请书。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">6</div>
+                            <div class="new-item-rank ">13</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3125861" target="_blank" class="news-link">字节跳动考虑合作百度昆仑芯？接近人士回应</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">7</div>
+                            <div class="new-item-rank ">15</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3125859" target="_blank" class="news-link">LNG船货“跨境通”首单落地，油气贸易人民币结算再拓新场景</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">8</div>
+                            <div class="new-item-rank ">19</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3125854" target="_blank" class="news-link">恒生科技指数日内涨超4%。地平线机器人涨超15%，哔哩哔哩涨超8%，携程、百度、美团涨超7%。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">9</div>
+                            <div class="new-item-rank ">26</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3125842" target="_blank" class="news-link">恒生指数涨幅扩大至2%，恒生科技指数现涨3.4%，恒生生物科技指数涨超7%。</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">雪球 · 1条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank ">26</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://xueqiu.com/s/SZ000021" target="_blank" class="news-link">深科技</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">金十数据 · 12条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank top">2</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260629130651721800" target="_blank" class="news-link">韩国总统李在明：必须尽快完成芯片生产建设。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank top">3</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260629130627114800" target="_blank" class="news-link">韩国总统李在明：需要比其他国家更快地确保人工智能要素发展。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">3</div>
+                            <div class="new-item-rank high">4</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260629130549451800" target="_blank" class="news-link">3000亿元隔夜逆回购“首秀”未披露价格，市场人士：央行有意防止政策信号被过度解读</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">4</div>
+                            <div class="new-item-rank ">6</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260629130303939800" target="_blank" class="news-link">轻舟试验飞船第二批在轨试验成果发布</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">5</div>
+                            <div class="new-item-rank ">7</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260629130254110800" target="_blank" class="news-link">韩国宣布在芯片、物理人工智能和人工智能数据中心方面的重大项目计划。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">6</div>
+                            <div class="new-item-rank ">11</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260629125157614800" target="_blank" class="news-link">印尼央行高级副行长：将通过所有工具维持流动性。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">7</div>
+                            <div class="new-item-rank ">13</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260629124925272800" target="_blank" class="news-link">国务院抗震救灾指挥部办公室、应急管理部派出工作组赶赴四川宜宾震区</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">8</div>
+                            <div class="new-item-rank ">16</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260629124138155800" target="_blank" class="news-link">据港交所文件：盛威時代科技股份有限公司向港交所提交上市申请书。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">9</div>
+                            <div class="new-item-rank ">18</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260629123942132800" target="_blank" class="news-link">两周不到重回70美元，油价新一轮危险正在降临！</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">10</div>
+                            <div class="new-item-rank ">19</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260629123641635800" target="_blank" class="news-link">智元机器人入股机器人力传感器研发商蓝点触控</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">11</div>
+                            <div class="new-item-rank ">26</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260629120508983800" target="_blank" class="news-link">字节跳动考虑合作百度昆仑芯？接近人士回应</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">12</div>
+                            <div class="new-item-rank ">30</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260629115639400800" target="_blank" class="news-link">金十数据整理：每日人工智能动态汇总（2026-06-29）</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">bilibili 热搜 · 1条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank ">6</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://search.bilibili.com/all?keyword=%E6%B8%85%E5%8D%8E%E5%A7%9A%E7%8F%ADUP%E4%B8%BB%E8%AF%A6%E8%A7%A3AI%E4%B8%93%E4%B8%9A%E5%B0%B1%E4%B8%9A" target="_blank" class="news-link">清华姚班UP主详解AI专业就业</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">知乎 · 2条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank high">5</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.zhihu.com/question/2051413400576693156" target="_blank" class="news-link">为什么香港的冲厕水是咸的？</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank ">17</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.zhihu.com/question/2053870272458100869" target="_blank" class="news-link">中国有巨大贸易顺差，人民币国际化又需要开放人民币，这两者如何调和？</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">酷安 · 6条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank top">2</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.coolapk.com/feed/72565674" target="_blank" class="news-link">在把用了3年的老款MatePadPro13.2更新后，我终于再次拥有最顶的华为全家桶了，Mate80RS+PuraXMax+MatePadProMax+freeclip2+freebudsPro5+watch5+Fit5Pro，可以说除了笔记本都拉满了，在深度体验后，全员鸿蒙6的生态体验真实优势和不足分享给大家！</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank ">8</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.coolapk.com/feed/72571073" target="_blank" class="news-link">本文长文，均为手打，无ai辅助，如不符合胃口、认为充满爹味可以滑走</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">3</div>
+                            <div class="new-item-rank ">10</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.coolapk.com/feed/72568572" target="_blank" class="news-link">谁懂华为一键登录的含金量[流汗滑稽]</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">4</div>
+                            <div class="new-item-rank ">11</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.coolapk.com/feed/72558382" target="_blank" class="news-link">5月国内手机市场份额曝光：华为苹果OPPO前三</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">5</div>
+                            <div class="new-item-rank ">12</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.coolapk.com/feed/72561663" target="_blank" class="news-link">iPhone 17系列中国区最新销量曝光：已超3558万台</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">6</div>
+                            <div class="new-item-rank ">13</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.coolapk.com/feed/72561201" target="_blank" class="news-link">#酷安夜话# 相完亲了，问我收入多少，是不是有车有房，我说都没买呢，她问我彩礼打算给多少，我说这个得看买房买车预算，再决定彩礼多少，女方专科 护士岗位，每个月5500，我目前大概每个月2W，半导体行业，女方要求彩礼28.8 婚前需要我出首付，加上她名字，代步车不低于15万，3金预算3万。😑😑😑，目前版本进化的这么快吗？老哥们遇到的都是啥样的。</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">IT之家 · 9条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank top">1</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.ithome.com/0/969/891.htm" target="_blank" class="news-link">我国轻舟试验飞船第二批在轨试验成果发布，把压缩机冰箱带上天</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank top">3</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.ithome.com/0/969/888.htm" target="_blank" class="news-link">北京太空算力创新中心揭牌成立，统筹组织星载 AI 芯片、太空大模型等联合研发</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">3</div>
+                            <div class="new-item-rank high">5</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.ithome.com/0/969/886.htm" target="_blank" class="news-link">苹果 2027 年产品线曝光，消息称 iPhone 19 Pro 系列、Ultra 2 阔折叠已开模测试</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">4</div>
+                            <div class="new-item-rank ">7</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.ithome.com/0/969/884.htm" target="_blank" class="news-link">任天堂（香港）：Switch 2 游戏机建议售价自 9 月 1 日起上调至 3700 港币</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">5</div>
+                            <div class="new-item-rank ">8</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.ithome.com/0/969/883.htm" target="_blank" class="news-link">月之暗面 Kimi：所有融资活动仅由公司直接负责，已发现部分机构和个人涉嫌欺诈</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">6</div>
+                            <div class="new-item-rank ">10</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.ithome.com/0/969/873.htm" target="_blank" class="news-link">华为 Mate 40 Pro 鸿蒙 NEXT 测试机曝光，系统基于 OpenHarmony 4.1 打造</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">7</div>
+                            <div class="new-item-rank ">12</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.ithome.com/0/969/863.htm" target="_blank" class="news-link">比亚迪全新腾势 Z9GT 首次 OTA：新增智能防晕车等功能</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">8</div>
+                            <div class="new-item-rank ">16</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.ithome.com/0/969/836.htm" target="_blank" class="news-link">比亚迪领汇 M9 商务旗舰 MPV 配置信息公开，官方指导价 18.88 万元起</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">9</div>
+                            <div class="new-item-rank ">17</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.ithome.com/0/969/829.htm" target="_blank" class="news-link">芬兰计划到 2031 年用 AI 全面改造公共部门，将取代部分员工</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">掘金 · 7条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank ">10</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://juejin.cn/post/7656050265522913280" target="_blank" class="news-link">AI 乱改代码？试试这套 SDD 规范驱动工作流</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank ">12</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://juejin.cn/post/7655691054172700718" target="_blank" class="news-link">DSpark 讲透：DeepSeek 不换模型，硬把 V4 提速 85%，是怎么做到的？</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">3</div>
+                            <div class="new-item-rank ">16</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://juejin.cn/post/7656300675647373321" target="_blank" class="news-link">DeepSeek这次招得太猛了，36个岗位，80%都要会Agent！</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">4</div>
+                            <div class="new-item-rank ">24</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://juejin.cn/post/7656055019972722731" target="_blank" class="news-link">如何让 AI 快速搭建一套生产 Agent ？全面理解 Agent 架构。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">5</div>
+                            <div class="new-item-rank ">26</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://juejin.cn/post/7656384927139102772" target="_blank" class="news-link">我从 0 开发的 AI Agent 智语项目发布了</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">6</div>
+                            <div class="new-item-rank ">27</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://juejin.cn/post/7656080006646497307" target="_blank" class="news-link">Main-safe：现代Android 架构真正的分水岭</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">7</div>
+                            <div class="new-item-rank ">28</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://juejin.cn/post/7656050265523372032" target="_blank" class="news-link">AI具身交互：实现一个会说话的3D虚拟伴侣</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <div class="footer-content">
+                    由 <span class="project-name">TrendRadar</span> 生成 · 
+                    <a href="https://github.com/sansan0/TrendRadar" target="_blank" class="footer-link">
+                        GitHub 开源项目
+                    </a>
+                    <br>
+                    <span style="color: #ea580c; font-weight: 500;">
+                        发现新版本 6.10.0，当前版本 3.3.0
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            async function saveAsImage() {
+                const button = event.target;
+                const originalText = button.textContent;
+                
+                try {
+                    button.textContent = '生成中...';
+                    button.disabled = true;
+                    window.scrollTo(0, 0);
+                    
+                    // 等待页面稳定
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    
+                    // 截图前隐藏按钮
+                    const buttons = document.querySelector('.save-buttons');
+                    buttons.style.visibility = 'hidden';
+                    
+                    // 再次等待确保按钮完全隐藏
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    const container = document.querySelector('.container');
+                    
+                    const canvas = await html2canvas(container, {
+                        backgroundColor: '#ffffff',
+                        scale: 1.5,
+                        useCORS: true,
+                        allowTaint: false,
+                        imageTimeout: 10000,
+                        removeContainer: false,
+                        foreignObjectRendering: false,
+                        logging: false,
+                        width: container.offsetWidth,
+                        height: container.offsetHeight,
+                        x: 0,
+                        y: 0,
+                        scrollX: 0,
+                        scrollY: 0,
+                        windowWidth: window.innerWidth,
+                        windowHeight: window.innerHeight
+                    });
+                    
+                    buttons.style.visibility = 'visible';
+                    
+                    const link = document.createElement('a');
+                    const now = new Date();
+                    const filename = `TrendRadar_热点新闻分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.png`;
+                    
+                    link.download = filename;
+                    link.href = canvas.toDataURL('image/png', 1.0);
+                    
+                    // 触发下载
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    button.textContent = '保存成功!';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                    
+                } catch (error) {
+                    const buttons = document.querySelector('.save-buttons');
+                    buttons.style.visibility = 'visible';
+                    button.textContent = '保存失败';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                }
+            }
+            
+            async function saveAsMultipleImages() {
+                const button = event.target;
+                const originalText = button.textContent;
+                const container = document.querySelector('.container');
+                const scale = 1.5; 
+                const maxHeight = 5000 / scale;
+                
+                try {
+                    button.textContent = '分析中...';
+                    button.disabled = true;
+                    
+                    // 获取所有可能的分割元素
+                    const newsItems = Array.from(container.querySelectorAll('.news-item'));
+                    const wordGroups = Array.from(container.querySelectorAll('.word-group'));
+                    const newSection = container.querySelector('.new-section');
+                    const errorSection = container.querySelector('.error-section');
+                    const header = container.querySelector('.header');
+                    const footer = container.querySelector('.footer');
+                    
+                    // 计算元素位置和高度
+                    const containerRect = container.getBoundingClientRect();
+                    const elements = [];
+                    
+                    // 添加header作为必须包含的元素
+                    elements.push({
+                        type: 'header',
+                        element: header,
+                        top: 0,
+                        bottom: header.offsetHeight,
+                        height: header.offsetHeight
+                    });
+                    
+                    // 添加错误信息（如果存在）
+                    if (errorSection) {
+                        const rect = errorSection.getBoundingClientRect();
+                        elements.push({
+                            type: 'error',
+                            element: errorSection,
+                            top: rect.top - containerRect.top,
+                            bottom: rect.bottom - containerRect.top,
+                            height: rect.height
+                        });
+                    }
+                    
+                    // 按word-group分组处理news-item
+                    wordGroups.forEach(group => {
+                        const groupRect = group.getBoundingClientRect();
+                        const groupNewsItems = group.querySelectorAll('.news-item');
+                        
+                        // 添加word-group的header部分
+                        const wordHeader = group.querySelector('.word-header');
+                        if (wordHeader) {
+                            const headerRect = wordHeader.getBoundingClientRect();
+                            elements.push({
+                                type: 'word-header',
+                                element: wordHeader,
+                                parent: group,
+                                top: groupRect.top - containerRect.top,
+                                bottom: headerRect.bottom - containerRect.top,
+                                height: headerRect.height
+                            });
+                        }
+                        
+                        // 添加每个news-item
+                        groupNewsItems.forEach(item => {
+                            const rect = item.getBoundingClientRect();
+                            elements.push({
+                                type: 'news-item',
+                                element: item,
+                                parent: group,
+                                top: rect.top - containerRect.top,
+                                bottom: rect.bottom - containerRect.top,
+                                height: rect.height
+                            });
+                        });
+                    });
+                    
+                    // 添加新增新闻部分
+                    if (newSection) {
+                        const rect = newSection.getBoundingClientRect();
+                        elements.push({
+                            type: 'new-section',
+                            element: newSection,
+                            top: rect.top - containerRect.top,
+                            bottom: rect.bottom - containerRect.top,
+                            height: rect.height
+                        });
+                    }
+                    
+                    // 添加footer
+                    const footerRect = footer.getBoundingClientRect();
+                    elements.push({
+                        type: 'footer',
+                        element: footer,
+                        top: footerRect.top - containerRect.top,
+                        bottom: footerRect.bottom - containerRect.top,
+                        height: footer.offsetHeight
+                    });
+                    
+                    // 计算分割点
+                    const segments = [];
+                    let currentSegment = { start: 0, end: 0, height: 0, includeHeader: true };
+                    let headerHeight = header.offsetHeight;
+                    currentSegment.height = headerHeight;
+                    
+                    for (let i = 1; i < elements.length; i++) {
+                        const element = elements[i];
+                        const potentialHeight = element.bottom - currentSegment.start;
+                        
+                        // 检查是否需要创建新分段
+                        if (potentialHeight > maxHeight && currentSegment.height > headerHeight) {
+                            // 在前一个元素结束处分割
+                            currentSegment.end = elements[i - 1].bottom;
+                            segments.push(currentSegment);
+                            
+                            // 开始新分段
+                            currentSegment = {
+                                start: currentSegment.end,
+                                end: 0,
+                                height: element.bottom - currentSegment.end,
+                                includeHeader: false
+                            };
+                        } else {
+                            currentSegment.height = potentialHeight;
+                            currentSegment.end = element.bottom;
+                        }
+                    }
+                    
+                    // 添加最后一个分段
+                    if (currentSegment.height > 0) {
+                        currentSegment.end = container.offsetHeight;
+                        segments.push(currentSegment);
+                    }
+                    
+                    button.textContent = `生成中 (0/${segments.length})...`;
+                    
+                    // 隐藏保存按钮
+                    const buttons = document.querySelector('.save-buttons');
+                    buttons.style.visibility = 'hidden';
+                    
+                    // 为每个分段生成图片
+                    const images = [];
+                    for (let i = 0; i < segments.length; i++) {
+                        const segment = segments[i];
+                        button.textContent = `生成中 (${i + 1}/${segments.length})...`;
+                        
+                        // 创建临时容器用于截图
+                        const tempContainer = document.createElement('div');
+                        tempContainer.style.cssText = `
+                            position: absolute;
+                            left: -9999px;
+                            top: 0;
+                            width: ${container.offsetWidth}px;
+                            background: white;
+                        `;
+                        tempContainer.className = 'container';
+                        
+                        // 克隆容器内容
+                        const clonedContainer = container.cloneNode(true);
+                        
+                        // 移除克隆内容中的保存按钮
+                        const clonedButtons = clonedContainer.querySelector('.save-buttons');
+                        if (clonedButtons) {
+                            clonedButtons.style.display = 'none';
+                        }
+                        
+                        tempContainer.appendChild(clonedContainer);
+                        document.body.appendChild(tempContainer);
+                        
+                        // 等待DOM更新
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                        // 使用html2canvas截取特定区域
+                        const canvas = await html2canvas(clonedContainer, {
+                            backgroundColor: '#ffffff',
+                            scale: scale,
+                            useCORS: true,
+                            allowTaint: false,
+                            imageTimeout: 10000,
+                            logging: false,
+                            width: container.offsetWidth,
+                            height: segment.end - segment.start,
+                            x: 0,
+                            y: segment.start,
+                            windowWidth: window.innerWidth,
+                            windowHeight: window.innerHeight
+                        });
+                        
+                        images.push(canvas.toDataURL('image/png', 1.0));
+                        
+                        // 清理临时容器
+                        document.body.removeChild(tempContainer);
+                    }
+                    
+                    // 恢复按钮显示
+                    buttons.style.visibility = 'visible';
+                    
+                    // 下载所有图片
+                    const now = new Date();
+                    const baseFilename = `TrendRadar_热点新闻分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+                    
+                    for (let i = 0; i < images.length; i++) {
+                        const link = document.createElement('a');
+                        link.download = `${baseFilename}_part${i + 1}.png`;
+                        link.href = images[i];
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        // 延迟一下避免浏览器阻止多个下载
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                    
+                    button.textContent = `已保存 ${segments.length} 张图片!`;
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('分段保存失败:', error);
+                    const buttons = document.querySelector('.save-buttons');
+                    buttons.style.visibility = 'visible';
+                    button.textContent = '保存失败';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                }
+            }
+            
+            document.addEventListener('DOMContentLoaded', function() {
+                window.scrollTo(0, 0);
+            });
+        </script>
+    </body>
+    </html>
+    
