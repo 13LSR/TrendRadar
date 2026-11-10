@@ -1,4 +1,4 @@
-"""Import upstream history with Slack webhook examples replaced in README files.
+"""Import upstream history with embedded Slack webhook URLs replaced by placeholders.
 
 Creates a separate branch; never edits the checkout or the source reference.
 Author, committer, dates, messages and merge topology are preserved. Signatures
@@ -40,6 +40,25 @@ def sanitize(source, destination, exclude=None, git_executable="git"):
     commits = git("rev-list", "--reverse", "--topo-order", *revisions).stdout.decode().splitlines()
     commit_map, tree_map, blob_map = {}, {}, {}
 
+    # Batch reads avoid one process per historical file. Inspect all reachable
+    # blobs, including reused files, while only rewriting the selected commits.
+    object_ids = git("rev-list", "--objects", "--no-object-names", source_sha).stdout
+    types = git("cat-file", "--batch-check=%(objectname) %(objecttype)", data=object_ids).stdout
+    blob_ids = [line.split(b" ")[0] for line in types.splitlines() if line.endswith(b" blob")]
+    payload = git("cat-file", "--batch", data=b"\n".join(blob_ids) + b"\n").stdout
+    offset = 0
+    for _ in blob_ids:
+        end = payload.index(b"\n", offset)
+        oid, kind, size = payload[offset:end].split(b" ")
+        if kind != b"blob":
+            raise ValueError("Unexpected object type while reading history")
+        offset = end + 1
+        content = payload[offset:offset + int(size)]
+        offset += int(size) + 1
+        cleaned = WEBHOOK.sub(PLACEHOLDER, content)
+        blob_map[oid] = git("hash-object", "-w", "--stdin", data=cleaned).stdout.strip() if cleaned != content else oid
+    del payload
+
     def clean_tree(tree):
         if tree in tree_map:
             return tree_map[tree]
@@ -50,14 +69,9 @@ def sanitize(source, destination, exclude=None, git_executable="git"):
                 continue
             metadata, path = record.split(b"\t", 1)
             mode, kind, oid = metadata.split(b" ")
-            if kind != b"blob" or not (path.lower().startswith(b"readme") and path.lower().endswith(b".md")):
-                continue
-            if oid not in blob_map:
-                content = git("cat-file", "blob", oid.decode()).stdout
-                cleaned = WEBHOOK.sub(PLACEHOLDER, content)
-                blob_map[oid] = git("hash-object", "-w", "--stdin", data=cleaned).stdout.strip() if cleaned != content else oid
-            if blob_map[oid] != oid:
-                records[index] = b" ".join([mode, kind, blob_map[oid]]) + b"\t" + path
+            replacement = clean_tree(oid.decode()).encode() if kind == b"tree" else blob_map.get(oid, oid)
+            if replacement != oid:
+                records[index] = b" ".join([mode, kind, replacement]) + b"\t" + path
                 changed = True
         tree_map[tree] = git("mktree", "-z", data=b"\0".join(records)).stdout.strip().decode() if changed else tree
         return tree_map[tree]
@@ -94,7 +108,7 @@ def sanitize(source, destination, exclude=None, git_executable="git"):
         "source": source_sha, "destination": target, "commit": result,
         "visited_commits": len(commits),
         "rewritten_commits": sum(before != after for before, after in commit_map.items()),
-        "sanitized_readme_blobs": sum(before != after for before, after in blob_map.items()),
+        "sanitized_blobs": sum(before != after for before, after in blob_map.items()),
     }
 
 

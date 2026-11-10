@@ -11,7 +11,7 @@
 - backup/pre-push-cleanup-20261110 保存推送保护处理前的完整本地历史，仅作为本地备份。
 - codex/upstream-clean 是清理文档示例后的上游基线，可在后续同步时重新生成。
 
-原仓库重新初始化过 Git，没有与上游共享祖先。本次从上游创建升级分支，以保留双方父提交的合并接入旧仓库，再迁移定制代码。已发布的本仓库提交保持原样。GitHub 推送保护拦截了上游历史 README 中的 Slack Webhook 示例，因此未发布的导入历史通过 `scripts/sanitize_upstream.py` 将示例替换为占位符；作者、日期、提交消息和合并拓扑保留，重写提交上的旧签名移除。后续先生成清理后的上游分支，再正常合并，无需再次使用 --allow-unrelated-histories。
+原仓库重新初始化过 Git，没有与上游共享祖先。本次从上游创建升级分支，以保留双方父提交的合并接入旧仓库，再迁移定制代码。已发布的本仓库提交保持原样。GitHub 推送保护拦截了上游历史 README 及配置注释中的 Slack Webhook 示例，因此未发布的导入历史通过 `scripts/sanitize_upstream.py` 将示例替换为占位符；作者、日期、提交消息和合并拓扑保留，重写提交上的旧签名移除。后续先生成清理后的上游分支，再正常合并，无需再次使用 --allow-unrelated-histories。
 
 ## 保留与适配
 
@@ -72,7 +72,7 @@ git switch -c codex/update-upstream-YYYYMMDD
 git merge codex/upstream-clean
 ~~~
 
-清理脚本只替换上游根目录 README 文件中的 Slack Webhook 示例，使用 Python 标准库与 Git，不修改源引用或工作目录。对同一上游版本重复运行会生成相同的提交。不要直接合并原始 upstream/master，否则会重新引入 GitHub 已拦截的历史示例；备份分支也应仅保留在本地，推送时明确指定 main。
+清理脚本扫描历史文件，将内嵌 Slack Webhook URL 替换为占位符，使用 Python 标准库与 Git，不修改源引用或工作目录。对同一上游版本重复运行会生成相同的提交。不要直接合并原始 upstream/master，否则会重新引入 GitHub 已拦截的历史示例；备份分支也应仅保留在本地，推送时明确指定 main。
 
 若有冲突，重点检查 config/config.yaml、config/frequency_words.txt、.github/workflows/crawler.yml、trendradar/context.py、trendradar/core/loader.py 和 trendradar/report/generator.py。配置要保留本仓库的平台、词组和 frontend_data_path，同时吸收新版字段。首页冲突应重新构建 React 页面。
 
