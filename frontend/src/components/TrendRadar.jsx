@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, Save, Activity, Clock, Hash, ChevronRight, ChevronDown, AlertCircle, ExternalLink, Sun, Moon, List, X, ArrowUp } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { exportReportImage } from '../lib/exportImage';
 
 const TrendRadar = ({ theme, toggleTheme }) => {
   const [data, setData] = useState(null);
@@ -8,6 +8,9 @@ const TrendRadar = ({ theme, toggleTheme }) => {
   const [error, setError] = useState(null);
   const [scrolled, setScrolled] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [savedImage, setSavedImage] = useState(null);
+  const saveInProgress = useRef(false);
   const [activeSection, setActiveSection] = useState(null);
   const [showToc, setShowToc] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -133,54 +136,43 @@ const TrendRadar = ({ theme, toggleTheme }) => {
       });
   }, []);
 
-  const handleSaveImage = () => {
-    if (!containerRef.current) return;
-    setSaving(true);
-    
-    // Use setTimeout to allow the UI to update to "SAVING..." before the heavy lifting starts
-    setTimeout(async () => {
-      try {
-        const canvas = await html2canvas(containerRef.current, {
-          backgroundColor: theme === 'light' ? '#f2f2f2' : '#101012',
-          scale: 1.5, // Slightly reduced scale for performance if needed, but 1.5 is usually fine
-          useCORS: true,
-          logging: false,
-          // Optimize capture area
-          windowWidth: containerRef.current.scrollWidth,
-          windowHeight: containerRef.current.scrollHeight,
-          onclone: (clonedDoc) => {
-             // Optimize: Remove heavy CSS effects from clone to speed up rendering
-             const clonedContainer = clonedDoc.body;
-             
-             // Remove grid pattern overlay
-             const gridPattern = clonedContainer.querySelector('.bg-grid-pattern');
-             if (gridPattern) gridPattern.remove();
+  useEffect(() => {
+    return () => {
+      if (savedImage) URL.revokeObjectURL(savedImage.url);
+    };
+  }, [savedImage]);
 
-             // Replace backdrop-blur with solid colors
-             const blurredElements = clonedContainer.querySelectorAll('.backdrop-blur-sm');
-             blurredElements.forEach(el => {
-               el.classList.remove('backdrop-blur-sm');
-               el.style.backgroundColor = theme === 'light' ? 'rgba(255,255,255,0.98)' : 'rgba(16,16,18,0.98)';
-             });
-          }
-        });
-        
-        const link = document.createElement('a');
-        const now = new Date();
-        const filename = `TrendRadar_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.png`;
-        
-        link.download = filename;
-        link.href = canvas.toDataURL('image/png');
-        document.body.appendChild(link);
+  const handleSaveImage = async () => {
+    if (!containerRef.current || saveInProgress.current) return;
+    saveInProgress.current = true;
+    setSaveError(null);
+    setSavedImage(null);
+    setSaving(true);
+
+    try {
+      // Let React apply the export state before measuring the page.
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const blob = await exportReportImage(containerRef.current, theme);
+      const now = new Date();
+      const filename = `TrendRadar_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.png`;
+      const url = URL.createObjectURL(blob);
+      setSavedImage({ url, filename });
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = url;
+      document.body.appendChild(link);
+      try {
         link.click();
-        document.body.removeChild(link);
-      } catch (err) {
-        console.error("Screenshot failed:", err);
-        alert("保存图片失败");
       } finally {
-        setSaving(false);
+        link.remove();
       }
-    }, 100);
+    } catch (err) {
+      console.error('Screenshot failed:', err);
+      setSaveError(err.message || '图片导出失败，请重试');
+    } finally {
+      saveInProgress.current = false;
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -312,19 +304,29 @@ const TrendRadar = ({ theme, toggleTheme }) => {
             </div>
 
             {/* Actions */}
-            {!saving && (
-              <div className="flex gap-3 w-full md:w-auto">
-                <button 
-                  onClick={handleSaveImage}
-                  disabled={saving}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-void border-2 border-primary text-primary font-display font-bold uppercase tracking-wider hover:bg-primary hover:text-void hover:shadow-[4px_4px_0px_rgba(255,176,0,1)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Save size={18} />
-                  <span>{saving ? 'SAVING...' : 'Save_IMG'}</span>
-                </button>
-              </div>
-            )}
+            <div className="flex gap-3 w-full md:w-auto" data-export-controls>
+              <button
+                onClick={handleSaveImage}
+                disabled={saving}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-void border-2 border-primary text-primary font-display font-bold uppercase tracking-wider hover:bg-primary hover:text-void hover:shadow-[4px_4px_0px_rgba(255,176,0,1)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save size={18} />
+                <span>{saving ? 'SAVING...' : 'Save_IMG'}</span>
+              </button>
+            </div>
           </div>
+
+          {saveError && (
+            <p role="alert" className="mt-4 text-sm text-secondary" data-export-controls>
+              保存图片失败：{saveError}
+            </p>
+          )}
+          {savedImage && (
+            <p role="status" className="mt-4 text-sm text-primary" data-export-controls>
+              图片已生成，若未自动下载，请
+              <a href={savedImage.url} download={savedImage.filename} className="underline ml-1">点击下载 PNG</a>
+            </p>
+          )}
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 border-t-2 border-surface pt-8">
