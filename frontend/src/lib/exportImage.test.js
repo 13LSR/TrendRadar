@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canvasToPng, getCaptureScale } from './exportImage.js';
+import { canvasToPng, createCaptureValidator, getCaptureScale } from './exportImage.js';
 
 test('short reports retain the original export resolution', () => {
   assert.equal(getCaptureScale(1280, 2000), 1.5);
@@ -24,6 +24,17 @@ test('invalid capture dimensions fail before allocating a canvas', () => {
   for (const [width, height] of [[0, 100], [100, -1], [NaN, 100], [100, Infinity]]) {
     assert.throws(() => getCaptureScale(width, height), /页面尺寸无效/);
   }
+});
+
+test('library validation checks scaled canvas dimensions for long reports', () => {
+  const width = 1265;
+  const height = 44529;
+  const scale = getCaptureScale(width, height);
+  const validator = createCaptureValidator(scale);
+  assert.equal(validator.validateOptions({ width, height, scale }).valid, true);
+  assert.equal(validator.validateOptions({ width, height: 1000000, scale }).valid, false);
+  assert.equal(validator.validateOptions({ width, height, scale: -1 }).valid, false);
+  assert.equal(validator.validateOptions({ width: 0, height, scale }).valid, false);
 });
 
 test('PNG encoding rejects empty results instead of downloading an empty file', async () => {

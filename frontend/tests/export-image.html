@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8">
+  <title>图片导出颜色兼容回归</title>
+  <style>
+    body { font-family: sans-serif; }
+    #report { width: 480px; padding: 20px; background: white; color: color(srgb 0.1 0.1 0.1); }
+    .swatch { width: 80px; height: 80px; display: inline-block; }
+    #srgb { background: color(srgb 1 0 0); }
+    #p3 { background: color(display-p3 0 1 0); }
+    #oklch { background: oklch(62.8% 0.2577 29.23); }
+    #oklab { background: oklab(62.8% 0.2249 0.1258); }
+    #lab { background: lab(54.29% 80.82 69.88); }
+    #lch { background: lch(54.29% 106.84 40.85); }
+    #effects {
+      padding: 20px;
+      border: 3px solid color(srgb 0.2 0.3 0.4);
+      box-shadow: 2px 2px 4px color(srgb 0 0 0 / 0.25);
+      background: linear-gradient(color(srgb 1 1 1), color(display-p3 0.8 0.9 1));
+    }
+    #effects::before { content: '伪元素颜色 '; color: color(srgb 0.1 0.4 0.2); }
+  </style>
+  <h1>图片导出颜色兼容回归</h1>
+  <p>通过 Vite 打开本页，点击测试；使用实际导出函数检查现代颜色、PNG 编码和像素内容。</p>
+  <div id="report">
+    <h2>color() / oklch() / oklab() / lab() / lch()</h2>
+    <div id="srgb" class="swatch"></div><div id="p3" class="swatch"></div><div id="oklch" class="swatch"></div><div id="oklab" class="swatch"></div><div id="lab" class="swatch"></div><div id="lch" class="swatch"></div>
+    <p id="effects">文字、边框、阴影和渐变</p>
+  </div>
+  <button id="run">测试图片导出</button>
+  <p id="result" role="status"></p>
+  <a id="download" hidden>下载测试 PNG</a>
+  <script type="module">
+    import { exportReportImage } from '../src/lib/exportImage.js';
+
+    const report = document.querySelector('#report');
+    const button = document.querySelector('#run');
+    const result = document.querySelector('#result');
+    const download = document.querySelector('#download');
+    button.onclick = async () => {
+      button.disabled = true;
+      result.textContent = '正在导出';
+      if (download.href.startsWith('blob:')) URL.revokeObjectURL(download.href);
+      download.hidden = true;
+      try {
+        const blob = await exportReportImage(report, 'light');
+        const image = await createImageBitmap(blob);
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0);
+        const bounds = report.getBoundingClientRect();
+        const scale = image.width / report.scrollWidth;
+        for (const [id, expected] of [['srgb', [255, 0, 0]], ['p3', [0, 255, 0]], ['oklch', [255, 0, 0]], ['oklab', [255, 0, 0]], ['lab', [255, 0, 0]], ['lch', [255, 0, 0]]]) {
+          const swatch = document.getElementById(id).getBoundingClientRect();
+          const pixel = context.getImageData(
+            Math.floor((swatch.left - bounds.left + 40) * scale),
+            Math.floor((swatch.top - bounds.top + 40) * scale), 1, 1,
+          ).data;
+          if (expected.some((value, i) => Math.abs(value - pixel[i]) > 5) || pixel[3] !== 255) {
+            throw new Error(`${id} 像素不符：${Array.from(pixel)}`);
+          }
+        }
+        download.href = URL.createObjectURL(blob);
+        download.download = 'modern-color-export.png';
+        download.hidden = false;
+        result.textContent = `PASS：6 种颜色像素校验通过；PNG ${image.width} × ${image.height}，${blob.size} bytes`;
+        image.close();
+      } catch (error) {
+        result.textContent = `FAIL：${error.message}`;
+      } finally {
+        button.disabled = false;
+      }
+    };
+  </script>
+</html>

@@ -1,4 +1,5 @@
-import html2canvas from 'html2canvas';
+// The original html2canvas 1.4 parser rejects modern computed colors such as color(srgb ...).
+import html2canvas, { createDefaultValidator } from 'html2canvas-pro';
 
 // Keep long reports below common canvas dimension and memory limits.
 const MAX_CANVAS_SIDE = 32760;
@@ -25,13 +26,24 @@ export function canvasToPng(canvas) {
   });
 }
 
+export function createCaptureValidator(scale) {
+  const validator = createDefaultValidator();
+  const validateDimensions = validator.validateDimensions.bind(validator);
+  // The library checks CSS dimensions by default. Canvas limits apply to the
+  // scaled pixel buffer; a long report can safely fit after getCaptureScale().
+  validator.validateDimensions = (width, height) => validateDimensions(width * scale, height * scale);
+  return validator;
+}
+
 export async function exportReportImage(element, theme) {
   await document.fonts.ready;
   const width = element.scrollWidth;
   const height = element.scrollHeight;
+  const scale = getCaptureScale(width, height);
   const canvas = await html2canvas(element, {
     backgroundColor: theme === 'light' ? '#f2f2f2' : '#101012',
-    scale: getCaptureScale(width, height),
+    scale,
+    validator: createCaptureValidator(scale),
     width,
     height,
     useCORS: true,
