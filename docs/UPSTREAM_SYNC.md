@@ -38,10 +38,19 @@ report.frontend_data_path: "data.json" 启用前端导出；设为空字符串�
 uv sync --frozen --no-dev
 uv run --frozen --with pytest python -m pytest tests -q
 npm --prefix frontend ci
+npm --prefix frontend test
 npm --prefix frontend run build
 ~~~
 
 构建完成后，将 frontend/dist/ 的内容复制到仓库根目录；不要将旧 data.json 放进 frontend/public/，以免构建覆盖最新采集数据。启动根目录静态服务，检查日报、主题、折叠、目录和截图按钮。
+
+### 页面排版与模块导出
+
+前端保留原有字体、配色和新闻聚合规则。桌面使用左侧固定目录与右侧新闻列表，窄屏使用单列布局与目录面板。样式集中在 `frontend/src/report.css`，新闻条目由 `NewsItem.jsx` 共享。
+
+“保存图片”打开模块多选面板。导出包含所选模块的全部原始新闻来源，不受页面折叠状态影响。每张图片固定 1800 像素宽，较长模块按完整新闻条目分页；单张直接下载 PNG，多张打包为 ZIP。导出区域不包含侧边目录和页面左右留白，手机端也使用相同输出分辨率。
+
+`ExportMenu.jsx` 管理选择和下载，`exportModules.js` 管理分页与 ZIP，`exportImage.js` 负责支持现代 CSS 颜色的截图与尺寸限制。单元测试覆盖尺寸、分页完整性、文件命名与 ZIP 内容。运行 Vite 后可访问 `/tests/export-image.html` 验证现代颜色渲染；还应使用真实日报检查多模块分页、手机端单模块导出及 PNG 实际尺寸。
 
 运行 uv run python -m trendradar 会按配置采集并可能推送通知。本地只验证采集时，应先使用单独的配置文件关闭 notification.enabled；通过 CONFIG_PATH 指向该配置。不要把通知密钥写入提交。
 

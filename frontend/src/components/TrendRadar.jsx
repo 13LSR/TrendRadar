@@ -1,581 +1,160 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Save, Activity, Clock, Hash, ChevronRight, ChevronDown, AlertCircle, ExternalLink, Sun, Moon, List, X, ArrowUp } from 'lucide-react';
-import { exportReportImage } from '../lib/exportImage';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, ArrowUp, List, Moon, Sun, X } from 'lucide-react';
+import NewsItemGroup from './NewsItem';
+import ExportMenu from './ExportMenu';
+import { groupSimilarItems } from '../lib/newsGroups';
+import '../report.css';
 
 const TrendRadar = ({ theme, toggleTheme }) => {
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [scrolled, setScrolled] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(null);
-  const [savedImage, setSavedImage] = useState(null);
-  const saveInProgress = useRef(false);
   const [activeSection, setActiveSection] = useState(null);
   const [showToc, setShowToc] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  
-  const containerRef = useRef(null);
   const sectionRefs = useRef({});
-
-  // 计算两个字符串的相似度
-  const calculateSimilarity = (str1, str2) => {
-    const len1 = str1.length;
-    const len2 = str2.length;
-    const maxLen = Math.max(len1, len2);
-    if (maxLen === 0) return 1.0;
-    
-    // 简化版：检查较短字符串是否包含在较长字符串中
-    const [shorter, longer] = len1 < len2 ? [str1, str2] : [str2, str1];
-    if (longer.includes(shorter)) return 0.85;
-    
-    // 检查核心关键词匹配（去除数字后比较）
-    const clean1 = str1.replace(/\d+/g, '').trim();
-    const clean2 = str2.replace(/\d+/g, '').trim();
-    if (clean1 === clean2 && clean1.length > 5) return 0.9;
-    
-    // 计算共同字符比例
-    const set1 = new Set(str1);
-    const set2 = new Set(str2);
-    const intersection = new Set([...set1].filter(x => set2.has(x)));
-    const union = new Set([...set1, ...set2]);
-    return intersection.size / union.size;
-  };
-
-  // 将相似的新闻项分组
-  const groupSimilarItems = (items) => {
-    const grouped = [];
-    const used = new Set();
-
-    items.forEach((item, index) => {
-      if (used.has(index)) return;
-
-      const group = {
-        mainItem: item,
-        duplicates: []
-      };
-
-      // 查找相似的项
-      items.forEach((otherItem, otherIndex) => {
-        if (otherIndex <= index || used.has(otherIndex)) return;
-        
-        const similarity = calculateSimilarity(item.title, otherItem.title);
-        if (similarity > 0.75) { // 相似度阈值 75%
-          group.duplicates.push(otherItem);
-          used.add(otherIndex);
-        }
-      });
-
-      grouped.push(group);
-      used.add(index);
-    });
-
-    return grouped;
-  };
-
-  // 平滑滚动到指定分组
-  const scrollToSection = (sectionId) => {
-    const element = sectionRefs.current[sectionId];
-    if (element) {
-      const yOffset = -80; // 顶部导航栏高度
-      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
-      setShowToc(false);
-    }
-  };
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // 监听滚动，更新当前激活的分组
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!data || saving) return;
-
-      const scrollPosition = window.scrollY;
-      
-      // 显示/隐藏返回顶部按钮
-      setShowScrollTop(scrollPosition > 400);
-      
-      // 找到当前可见的section
-      for (const group of data.groups) {
-        const element = sectionRefs.current[group.id];
-        if (element) {
-          const { top, bottom } = element.getBoundingClientRect();
-          if (top <= 150 && bottom > 150) {
-            setActiveSection(group.id);
-            break;
-          }
-        }
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    handleScroll(); // 初始化
-
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [data]);
+  const mobileToc = useRef(null);
+  const tocTrigger = useRef(null);
+  const groups = useMemo(() => data?.groups.map(group => ({
+    ...group, stories: groupSimilarItems(group.items),
+  })) || [], [data]);
 
   useEffect(() => {
-    // Fetch data with cache busting timestamp
-    const timestamp = new Date().getTime();
-    fetch(`./data.json?t=${timestamp}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to load data');
-        return res.json();
+    const controller = new AbortController();
+    fetch(`./data.json?t=${Date.now()}`, { signal: controller.signal })
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load data');
+        return response.json();
       })
-      .then(jsonData => {
-        setData(jsonData);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Error loading data:", err);
-        setError(err.message);
-        setLoading(false);
-      });
+      .then(json => { setData(json); setActiveSection(json.groups[0]?.id); })
+      .catch(err => { if (err.name !== 'AbortError') setError(err.message); });
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    return () => {
-      if (savedImage) URL.revokeObjectURL(savedImage.url);
-    };
-  }, [savedImage]);
-
-  const handleSaveImage = async () => {
-    if (!containerRef.current || saveInProgress.current) return;
-    saveInProgress.current = true;
-    setSaveError(null);
-    setSavedImage(null);
-    setSaving(true);
-
-    try {
-      // Let React apply the export state before measuring the page.
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const blob = await exportReportImage(containerRef.current, theme);
-      const now = new Date();
-      const filename = `TrendRadar_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.png`;
-      const url = URL.createObjectURL(blob);
-      setSavedImage({ url, filename });
-      const link = document.createElement('a');
-      link.download = filename;
-      link.href = url;
-      document.body.appendChild(link);
-      try {
-        link.click();
-      } finally {
-        link.remove();
+    let frame;
+    const update = () => {
+      setShowScrollTop(window.scrollY > 400);
+      let current = groups[0]?.id;
+      for (const group of groups) {
+        if (sectionRefs.current[group.id]?.getBoundingClientRect().top <= 140) current = group.id;
       }
-    } catch (err) {
-      console.error('Screenshot failed:', err);
-      setSaveError(err.message || '图片导出失败，请重试');
-    } finally {
-      saveInProgress.current = false;
-      setSaving(false);
-    }
+      setActiveSection(current);
+    };
+    const onScroll = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(update); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    update();
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('scroll', onScroll); };
+  }, [groups]);
+
+  useEffect(() => {
+    const dialog = mobileToc.current;
+    if (!dialog) return;
+    if (showToc && !dialog.open) dialog.showModal();
+    else if (!showToc && dialog.open) dialog.close();
+  }, [showToc]);
+
+  const scrollBehavior = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
+  const navigateTo = id => {
+    setShowToc(false);
+    setActiveSection(id);
+    sectionRefs.current[id]?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-void flex items-center justify-center text-primary font-mono animate-pulse">
-        INITIALIZING SYSTEM...
-      </div>
-    );
-  }
+  if (error) return (
+    <div className="report-state font-mono">
+      <AlertCircle size={40} /><h1>SYSTEM ERROR</h1><p>{error}</p><p>Please check data.json connectivity.</p>
+    </div>
+  );
+  if (!data) return <div className="report-state font-mono" role="status">INITIALIZING SYSTEM...</div>;
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-void flex flex-col items-center justify-center text-secondary font-mono p-4">
-        <AlertCircle size={48} className="mb-4" />
-        <h1 className="text-xl font-bold mb-2">SYSTEM ERROR</h1>
-        <p className="text-sm text-dim">{error}</p>
-        <p className="text-xs text-dim mt-4">Please check data.json connectivity.</p>
-      </div>
-    );
-  }
-
-  if (!data) return null;
+  const contents = label => (
+    <nav aria-label={label} className="report-toc">
+      {groups.map(group => (
+        <a key={group.id} href={`#section-${group.id}`} aria-current={activeSection === group.id ? 'location' : undefined}
+          onClick={event => { event.preventDefault(); navigateTo(group.id); }}>
+          <span>{group.name}</span><small>{group.count}</small>
+        </a>
+      ))}
+    </nav>
+  );
 
   return (
-    <div className="min-h-screen bg-void text-bone font-mono selection:bg-primary selection:text-void overflow-x-hidden" ref={containerRef}>
-      
-      {/* CRT Overlay Effect removed for better readability */}
-
-      {/* Top Status Bar */}
-      <header className="sticky top-0 z-40 border-b-2 border-surface bg-void/95 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-primary animate-pulse">
-            <div className="w-3 h-3 bg-primary shadow-[0_0_10px_var(--tw-colors-primary)]"></div>
-            <span className="font-display font-bold tracking-widest text-lg">TREND_RADAR</span>
-          </div>
-          {!saving && (
-            <div className="hidden md:flex gap-6 text-xs text-dim uppercase tracking-widest items-center">
-              <span>MEM: 64KB OK</span>
-              <span>NET: CONNECTED</span>
-              <span>SEC: HIGH</span>
-              <button 
-                onClick={toggleTheme}
-                className="ml-4 p-2 hover:text-primary transition-colors border border-transparent hover:border-dim/30 rounded-full"
-                title="Toggle Theme"
-              >
-                {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-              </button>
-            </div>
-          )}
+    <div className="radar-page font-mono">
+      <a className="report-skip" href="#news-content">跳转到新闻</a>
+      <header className="report-topbar">
+        <div className="report-shell report-topbar-inner">
+          <a className="report-brand font-display" href="#top">TREND_RADAR</a>
+          <div className="report-system-status"><span>MEM: 64KB OK</span><span>NET: CONNECTED</span><span>SEC: HIGH</span></div>
+          <button className="report-icon-button" onClick={toggleTheme} disabled={saving}
+            aria-label={theme === 'dark' ? '切换浅色主题' : '切换深色主题'} title="Toggle Theme">
+            {theme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}
+          </button>
         </div>
       </header>
 
-      {/* 目录面板 */}
-      {showToc && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
-          {/* 背景遮罩 */}
-          <div 
-            className="absolute inset-0 bg-void/80 backdrop-blur-sm"
-            onClick={() => setShowToc(false)}
-          />
-          
-          {/* 目录内容 */}
-          <div className="relative w-full max-w-2xl max-h-[70vh] overflow-y-auto bg-surface border-2 border-primary shadow-[0_0_30px_rgba(255,176,0,0.3)]">
-            {/* 头部 */}
-            <div className="sticky top-0 bg-surface border-b-2 border-primary p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <List size={20} className="text-primary" />
-                <h2 className="font-display font-bold text-xl text-primary uppercase tracking-wider">
-                  内容目录
-                </h2>
-              </div>
-              <button
-                onClick={() => setShowToc(false)}
-                className="p-2 hover:bg-primary/10 transition-colors"
-              >
-                <X size={20} className="text-dim hover:text-primary" />
+      <div className="report-shell" id="top">
+        <section className="report-overview" aria-labelledby="report-title">
+          <div className="report-heading-row">
+            <div><h1 id="report-title" className="font-display">热点新闻</h1><p>System Report // {data.meta.type}</p></div>
+            <ExportMenu groups={data.groups} meta={data.meta} theme={theme} activeSection={activeSection} onBusyChange={setSaving} />
+          </div>
+          <dl className="report-stats">
+            <div><dt>TOTAL_ITEMS</dt><dd className="font-display">{data.meta.total}<span>条</span></dd></div>
+            <div><dt>HOT_TOPICS</dt><dd className="font-display report-hot-value">{data.meta.hot}<span>条</span></dd></div>
+            <div><dt>SYS_TIME</dt><dd className="report-time">{data.meta.generatedAt}</dd></div>
+            <div><dt>STATUS</dt><dd className="report-ready">{data.meta.status}</dd></div>
+          </dl>
+        </section>
+
+        <div className="report-layout">
+          <aside className="report-sidebar">
+            <div className="report-sidebar-heading"><h2>内容目录</h2><span>{groups.length} 个模块</span></div>
+            {contents('内容目录')}
+          </aside>
+          <main id="news-content" className="report-content">
+            <div className="report-mobile-navigation">
+              <button ref={tocTrigger} className="report-button" onClick={() => setShowToc(true)} aria-haspopup="dialog">
+                <List size={17} />内容目录<span>{groups.length}</span>
               </button>
             </div>
-
-            {/* 目录列表 */}
-            <div className="p-4 space-y-2">
-              {data.groups.map((group) => (
-                <button
-                  key={group.id}
-                  onClick={() => scrollToSection(group.id)}
-                  className={`w-full text-left p-3 border-l-4 transition-all ${
-                    activeSection === group.id
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-dim/30 hover:border-tertiary hover:bg-surface/50 text-bone'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-dim font-mono">{group.index}</span>
-                      <span className="font-bold text-lg">{group.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-dim">{group.count} 条</span>
-                      {group.isHot && (
-                        <span className="text-xs text-secondary animate-pulse">🔥</span>
-                      )}
-                    </div>
+            {!groups.length && <p className="report-empty">暂无匹配的热点新闻，下一次更新后可在这里查看。</p>}
+            {groups.map(group => (
+              <section className="news-section" key={group.id} id={`section-${group.id}`}
+                ref={element => { sectionRefs.current[group.id] = element; }} aria-labelledby={`heading-${group.id}`}>
+                <header className="news-section-header">
+                  <h2 id={`heading-${group.id}`}>{group.name}</h2>
+                  <div className="news-section-summary">
+                    {group.isHot && <span className="news-heat"><AlertCircle size={13} />CRITICAL_HEAT</span>}
+                    <span className="news-count">{group.count}<small> 条</small></span>
                   </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <main className="relative z-10 max-w-4xl mx-auto p-4 md:p-8">
-        
-        {/* Dashboard Header Card */}
-        <div className="mb-12 border-2 border-surface bg-surface/30 p-6 relative group hover:border-primary transition-colors duration-300">
-          {/* Decorative Corners */}
-          <div className="absolute -top-1 -left-1 w-2 h-2 bg-primary"></div>
-          <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-primary"></div>
-          <div className="absolute top-0 right-0 w-16 h-0 border-t-2 border-dashed border-dim/50"></div>
-
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div>
-              <h1 className="font-display text-4xl md:text-5xl font-bold text-bone uppercase mb-2 tracking-wide drop-shadow-lg">
-                热点新闻
-              </h1>
-              <div className="flex items-center gap-2 text-primary text-sm">
-                <Terminal size={16} />
-                <span className="uppercase tracking-widest">System Report // {data.meta.type}</span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3 w-full md:w-auto" data-export-controls>
-              <button
-                onClick={handleSaveImage}
-                disabled={saving}
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-void border-2 border-primary text-primary font-display font-bold uppercase tracking-wider hover:bg-primary hover:text-void hover:shadow-[4px_4px_0px_rgba(255,176,0,1)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Save size={18} />
-                <span>{saving ? 'SAVING...' : 'Save_IMG'}</span>
-              </button>
-            </div>
-          </div>
-
-          {saveError && (
-            <p role="alert" className="mt-4 text-sm text-secondary" data-export-controls>
-              保存图片失败：{saveError}
-            </p>
-          )}
-          {savedImage && (
-            <p role="status" className="mt-4 text-sm text-primary" data-export-controls>
-              图片已生成，若未自动下载，请
-              <a href={savedImage.url} download={savedImage.filename} className="underline ml-1">点击下载 PNG</a>
-            </p>
-          )}
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 border-t-2 border-surface pt-8">
-            <StatBox label="TOTAL_ITEMS" value={data.meta.total} suffix="条" color="text-bone" />
-            <StatBox label="HOT_TOPICS" value={data.meta.hot} suffix="条" color="text-secondary" />
-            <StatBox label="SYS_TIME" value={data.meta.generatedAt.split(' ')[1]} icon={<Clock size={14}/>} color="text-tertiary" />
-            <StatBox label="STATUS" value={data.meta.status} color="text-primary" />
-          </div>
-        </div>
-
-        {/* Content Groups */}
-        <div className="space-y-12">
-          {data.groups.map((group) => (
-            <section 
-              key={group.id} 
-              ref={(el) => (sectionRefs.current[group.id] = el)}
-              className="relative"
-            >
-              {/* Group Header */}
-              <div className="flex items-end justify-between border-b-2 border-primary mb-6 pb-2">
-                <div className="flex items-center gap-4">
-                  <span className="text-5xl font-display font-bold text-surface/50 absolute -left-4 -top-8 md:-left-12 select-none">
-                    {group.index.split('/')[0]}
-                  </span>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 uppercase tracking-wider">
-                        SECTION_{group.index}
-                      </span>
-                      {group.isHot && (
-                        <span className="flex items-center gap-1 text-xs text-secondary animate-pulse">
-                          <AlertCircle size={12} /> CRITICAL_HEAT
-                        </span>
-                      )}
-                    </div>
-                    <h2 className="text-2xl font-bold text-bone">{group.name}</h2>
-                  </div>
+                </header>
+                <div className="news-list">
+                  {group.stories.map((story, index) => (
+                    <NewsItemGroup key={`${group.id}-${index}`} group={story} number={index + 1} groupId={`${group.id}-${index}`} />
+                  ))}
                 </div>
-                <div className="text-right">
-                  <span className={`font-display text-xl font-bold ${group.isHot ? 'text-secondary' : 'text-tertiary'}`}>
-                    {group.count}
-                  </span>
-                  <span className="text-xs text-dim ml-2">ITEMS</span>
-                </div>
-              </div>
-
-              {/* News List */}
-              <div className="grid gap-4">
-                {groupSimilarItems(group.items).map((itemGroup, idx) => (
-                  <NewsItemGroup 
-                    key={`${group.id}-item-${idx}`}
-                    group={itemGroup}
-                    groupId={`${group.id}-${idx}`}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-
-        {/* Failed IDs Section */}
-        {data.failed_ids && data.failed_ids.length > 0 && (
-          <div className="mt-12 border-2 border-secondary bg-secondary/10 p-4">
-             <h3 className="text-secondary font-bold mb-2 flex items-center gap-2">
-               <AlertCircle size={16} /> SYSTEM WARNING: CONNECTION_LOST
-             </h3>
-             <div className="text-xs text-dim font-mono">
-               FAILED_TARGETS: {data.failed_ids.join(', ')}
-             </div>
-          </div>
-        )}
-
-        <footer className="mt-20 border-t border-dashed border-dim/30 pt-8 text-center text-xs text-dim font-mono uppercase tracking-widest mb-10">
-          <p>End of Line_ // TrendRadar System</p>
-          <div className="mt-4 flex justify-center gap-4">
-             <a href="https://github.com/sansan0/TrendRadar" target="_blank" className="hover:text-primary transition-colors">GitHub</a>
-          </div>
-        </footer>
-
-      </main>
-
-      {/* 悬浮操作按钮 - 右下角 */}
-      {!saving && (
-        <div className="fixed bottom-8 right-8 z-40 flex flex-col gap-3">
-          {/* 目录按钮 */}
-          <button
-            onClick={() => setShowToc(!showToc)}
-            className="group relative w-14 h-14 bg-tertiary border-2 border-tertiary text-void hover:bg-void hover:text-tertiary transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center"
-            title="打开目录"
-          >
-            <List size={24} className="transition-transform group-hover:scale-110" />
-            <span className="absolute right-16 top-1/2 -translate-y-1/2 bg-tertiary text-void px-3 py-1 text-sm font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              目录导航
-            </span>
-          </button>
-
-          {/* 返回顶部按钮 */}
-          {showScrollTop && (
-            <button
-              onClick={scrollToTop}
-              className="group relative w-14 h-14 bg-primary border-2 border-primary text-void hover:bg-void hover:text-primary transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center animate-fadeIn"
-              title="返回顶部"
-            >
-              <ArrowUp size={24} className="transition-transform group-hover:scale-110 group-hover:-translate-y-1" />
-              <span className="absolute right-16 top-1/2 -translate-y-1/2 bg-primary text-void px-3 py-1 text-sm font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                回到顶部
-              </span>
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// 可折叠的新闻项组件
-const NewsItemGroup = ({ group, groupId }) => {
-  const [expanded, setExpanded] = useState(false);
-  const hasDuplicates = group.duplicates.length > 0;
-  const item = group.mainItem;
-
-  return (
-    <div className="relative">
-      {/* 主新闻项 */}
-      <div 
-        className="group relative bg-surface/40 border-l-2 border-surface hover:border-primary hover:bg-surface/80 transition-all duration-200 p-4"
-      >
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-surface group-hover:bg-primary transition-colors"></div>
-        
-        <div className="flex gap-4 items-start">
-          {/* ID Badge */}
-          <div className="hidden md:flex flex-col items-center justify-center w-12 h-12 border border-dim/30 bg-void/50 text-dim font-display font-bold text-lg group-hover:text-primary group-hover:border-primary/50 transition-colors">
-            {item.id.split('-')[1] || '00'}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            {/* Metadata Row */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-mono mb-2">
-              <span className="text-tertiary uppercase">[{item.source}]</span>
-              
-              {item.rank !== '-' && (
-                <span className={`px-1.5 py-0.5 font-bold ${item.rank === '1' || item.rank === '2' || item.rank === '3' ? 'bg-secondary text-void' : 'bg-dim/20 text-dim'}`}>
-                  RK:{item.rank}
-                </span>
-              )}
-              
-              {item.time && (
-                <span className="text-dim flex items-center gap-1">
-                  <Clock size={10} /> {item.time}
-                </span>
-              )}
-              
-              {item.views && (
-                <span className="text-dim">
-                  :: {item.views}
-                </span>
-              )}
-
-              {item.isNew && (
-                <span className="ml-auto bg-primary text-void text-[10px] font-bold px-2 py-0.5 uppercase animate-pulse">
-                  New_Signal
-                </span>
-              )}
-
-              {/* 重复来源标识 */}
-              {hasDuplicates && (
-                <span className="bg-tertiary/20 text-tertiary text-[10px] font-bold px-2 py-0.5 uppercase border border-tertiary/30">
-                  +{group.duplicates.length} 来源
-                </span>
-              )}
-            </div>
-
-            {/* Title */}
-            <a href={item.url} target="_blank" rel="noopener noreferrer" className="block group-hover:translate-x-1 transition-transform duration-200">
-              <h3 className="text-base md:text-lg font-bold text-bone group-hover:text-primary w-full">
-                {item.title}
-              </h3>
-            </a>
-          </div>
-          
-          {/* 折叠按钮或链接图标 */}
-          <div className="self-center">
-            {hasDuplicates ? (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="p-2 text-dim hover:text-primary transition-colors"
-                title={expanded ? "折叠" : "展开查看所有来源"}
-              >
-                <ChevronDown 
-                  size={20}
-                  className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-                />
-              </button>
-            ) : (
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity text-primary">
-                <ChevronRight />
-              </div>
+              </section>
+            ))}
+            {data.failed_ids?.length > 0 && (
+              <div className="report-warning"><h3><AlertCircle size={16} />SYSTEM WARNING: CONNECTION_LOST</h3><p>FAILED_TARGETS: {data.failed_ids.join(', ')}</p></div>
             )}
-          </div>
+            <footer className="report-footer"><span>End of Line_ // TrendRadar System</span><a href="https://github.com/sansan0/TrendRadar" target="_blank" rel="noopener noreferrer">GitHub</a></footer>
+          </main>
         </div>
       </div>
 
-      {/* 折叠的重复项 */}
-      {hasDuplicates && expanded && (
-        <div className="ml-8 md:ml-16 mt-2 space-y-2 border-l-2 border-dim/30 pl-4">
-          {group.duplicates.map((dupItem, idx) => (
-            <div 
-              key={`${groupId}-dup-${idx}`}
-              className="bg-void/30 border border-dim/20 hover:border-dim/40 p-3 transition-all"
-            >
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-mono mb-1.5">
-                <span className="text-tertiary uppercase">[{dupItem.source}]</span>
-                {dupItem.rank !== '-' && (
-                  <span className="px-1.5 py-0.5 bg-dim/20 text-dim font-bold">
-                    RK:{dupItem.rank}
-                  </span>
-                )}
-                {dupItem.time && (
-                  <span className="text-dim flex items-center gap-1">
-                    <Clock size={10} /> {dupItem.time}
-                  </span>
-                )}
-                {dupItem.views && (
-                  <span className="text-dim">:: {dupItem.views}</span>
-                )}
-              </div>
-              <a href={dupItem.url} target="_blank" rel="noopener noreferrer" className="block hover:text-primary transition-colors">
-                <h4 className="text-sm text-bone/80 hover:text-primary">
-                  {dupItem.title}
-                </h4>
-              </a>
-            </div>
-          ))}
+      <dialog ref={mobileToc} className="report-toc-dialog" onCancel={() => setShowToc(false)}
+        onClose={() => { setShowToc(false); tocTrigger.current?.focus({ preventScroll: true }); }}
+        onClick={event => { if (event.target === event.currentTarget) setShowToc(false); }} aria-labelledby="mobile-toc-title">
+        <div className="report-toc-dialog-inner">
+          <div className="report-sidebar-heading"><h2 id="mobile-toc-title">内容目录</h2><button className="report-icon-button" onClick={() => setShowToc(false)} aria-label="关闭目录"><X size={20} /></button></div>
+          {contents('移动端内容目录')}
         </div>
-      )}
+      </dialog>
+      {showScrollTop && <button className="report-back-top report-icon-button" aria-label="返回顶部" onClick={() => window.scrollTo({ top: 0, behavior: scrollBehavior() })}><ArrowUp size={21} /></button>}
     </div>
   );
 };
-
-// Helper Component for Stats
-const StatBox = ({ label, value, suffix, icon, color }) => (
-  <div className="bg-void/50 border border-dim/20 p-3 hover:border-dim/50 transition-colors">
-    <div className="text-[10px] text-dim uppercase tracking-wider mb-1 flex items-center gap-1">
-      {icon} {label}
-    </div>
-    <div className={`font-display text-2xl font-bold ${color}`}>
-      {value}<span className="text-xs font-mono text-dim ml-1">{suffix}</span>
-    </div>
-  </div>
-);
 
 export default TrendRadar;

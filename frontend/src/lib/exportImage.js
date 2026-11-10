@@ -5,12 +5,12 @@ import html2canvas, { createDefaultValidator } from 'html2canvas-pro';
 const MAX_CANVAS_SIDE = 32760;
 const MAX_CANVAS_PIXELS = 16 * 1024 * 1024;
 
-export function getCaptureScale(width, height) {
+export function getCaptureScale(width, height, preferredScale = 1.5) {
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
     throw new Error('页面尺寸无效，请刷新后重试');
   }
   return Math.min(
-    1.5,
+    preferredScale,
     MAX_CANVAS_SIDE / width,
     MAX_CANVAS_SIDE / height,
     Math.sqrt(MAX_CANVAS_PIXELS / (width * height)),
@@ -35,11 +35,11 @@ export function createCaptureValidator(scale) {
   return validator;
 }
 
-export async function exportReportImage(element, theme) {
+export async function exportReportImage(element, theme, options = {}) {
   await document.fonts.ready;
   const width = element.scrollWidth;
   const height = element.scrollHeight;
-  const scale = getCaptureScale(width, height);
+  const scale = getCaptureScale(width, height, options.preferredScale);
   const canvas = await html2canvas(element, {
     backgroundColor: theme === 'light' ? '#f2f2f2' : '#101012',
     scale,
@@ -49,7 +49,7 @@ export async function exportReportImage(element, theme) {
     useCORS: true,
     logging: false,
     // Preserve the current responsive layout in the cloned page.
-    windowWidth: window.innerWidth,
+    windowWidth: options.windowWidth ?? window.innerWidth,
     windowHeight: window.innerHeight,
     scrollX: 0,
     scrollY: 0,
