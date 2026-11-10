@@ -16,8 +16,8 @@ export default {
         dim: 'var(--color-dim)',        // Muted Gray
       },
       fontFamily: {
-        display: ['"Chakra Petch"', 'sans-serif'],
-        mono: ['"Space Mono"', 'monospace'],
+        display: ['"Chakra Petch"', '"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
+        mono: ['"Space Mono"', '"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
       },
       boxShadow: {
         'hard': '4px 4px 0px 0px var(--tw-shadow-color)',

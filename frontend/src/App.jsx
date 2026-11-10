@@ -1,61 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useLayoutEffect, useCallback } from 'react';
 import TrendRadar from './components/TrendRadar';
 import IntroSequence from './components/IntroSequence';
+import { readPreference, writePreference, INTRO_KEY, THEME_KEY } from './lib/preferences';
 
 function App() {
-  const [isSystemReady, setIsSystemReady] = useState(false);
-  const [theme, setTheme] = useState('light');
+  const [isSystemReady, setIsSystemReady] = useState(() => readPreference(INTRO_KEY) === 'seen');
+  const [theme, setTheme] = useState(() => readPreference(THEME_KEY) === 'dark' ? 'dark' : 'light');
 
-  useEffect(() => {
-    // Check system preference or saved preference
-    const savedTheme = localStorage.getItem('trendradar-theme-v2');
-    if (savedTheme) {
-      setTheme(savedTheme);
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      // Even if system is dark, we default to light per user request, unless they strictly prefer dark?
-      // Let's stick to the requested default 'light' unless explicitly saved.
-      // But to be safe and follow standard patterns, we can leave system check or just default to light.
-      // Given the user's strong request for white default, let's ignore system dark mode for now or deprioritize it.
-      setTheme('light'); 
-    }
-  }, []);
-
-  useEffect(() => {
-    // Apply theme to document
-    const root = window.document.documentElement;
-    if (theme === 'light') {
-      root.classList.add('light');
-      root.classList.remove('dark');
-    } else {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    }
-    localStorage.setItem('trendradar-theme-v2', theme);
-
-    // Update favicon based on theme
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('light', theme === 'light');
+    root.classList.toggle('dark', theme === 'dark');
+    writePreference(THEME_KEY, theme);
     const favicon = document.getElementById('favicon');
-    if (favicon) {
-      if (theme === 'light') {
-        favicon.href = 'https://tc.lcxj.dpdns.org/docs/mgb.ico';
-      } else {
-        favicon.href = 'https://tc.lcxj.dpdns.org/docs/mgh.ico';
-      }
-    }
+    if (favicon) favicon.href = theme === 'light' ? 'https://tc.lcxj.dpdns.org/docs/mgb.ico' : 'https://tc.lcxj.dpdns.org/docs/mgh.ico';
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
+  const completeIntro = useCallback(() => {
+    writePreference(INTRO_KEY, 'seen');
+    setIsSystemReady(true);
+  }, []);
 
-  return (
-    <>
-      {!isSystemReady ? (
-        <IntroSequence onComplete={() => setIsSystemReady(true)} />
-      ) : (
-        <TrendRadar theme={theme} toggleTheme={toggleTheme} />
-      )}
-    </>
-  );
+  return isSystemReady
+    ? <TrendRadar theme={theme} toggleTheme={() => setTheme(value => value === 'dark' ? 'light' : 'dark')} />
+    : <IntroSequence onComplete={completeIntro} />;
 }
 
 export default App;

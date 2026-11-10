@@ -41,9 +41,11 @@ export default function ExportMenu({ groups, meta, theme, activeSection, onBusyC
       }
     };
     document.addEventListener('pointerdown', dismissOutside);
+    document.addEventListener('focusin', dismissOutside);
     document.addEventListener('keydown', dismissEscape);
     return () => {
       document.removeEventListener('pointerdown', dismissOutside);
+      document.removeEventListener('focusin', dismissOutside);
       document.removeEventListener('keydown', dismissEscape);
     };
   }, [open]);
@@ -101,7 +103,7 @@ export default function ExportMenu({ groups, meta, theme, activeSection, onBusyC
   return (
     <div className="export-menu" ref={wrapper}>
       <button className="report-button report-button-primary" ref={trigger} onClick={toggleOpen}
-        aria-expanded={open} aria-controls="export-panel">
+        aria-expanded={open} aria-controls="export-panel" aria-haspopup="dialog">
         <Download size={17} aria-hidden="true" />
         {saving ? '正在生成…' : '保存图片'}
         <ChevronDown size={15} aria-hidden="true" />
@@ -116,24 +118,23 @@ export default function ExportMenu({ groups, meta, theme, activeSection, onBusyC
             }}><X size={18} /></button>
           </div>
           <p className="export-description">每个模块单独成图，内容较多时自动分页。多张图片将打包为 ZIP。</p>
-          <fieldset disabled={saving}>
-            <legend className="sr-only">需要下载的新闻模块</legend>
+          <div className="export-selection" role="group" aria-label="需要下载的新闻模块" aria-busy={saving}>
             <div className="export-selection-actions">
-              <button type="button" onClick={() => setSelected(new Set(groups.filter(group => group.items.length).map(group => group.id)))}>全选</button>
-              <button type="button" onClick={() => setSelected(new Set())}>清空</button>
+              <button type="button" disabled={saving} onClick={() => setSelected(new Set(groups.filter(group => group.items.length).map(group => group.id)))}>全选</button>
+              <button type="button" disabled={saving} onClick={() => setSelected(new Set())}>清空</button>
               <span>已选 {selected.size} 个模块</span>
             </div>
             <div className="export-options">
               {groups.map(group => (
                 <label key={group.id} className="export-option">
-                  <input type="checkbox" checked={selected.has(group.id)} disabled={!group.items.length}
+                  <input type="checkbox" checked={selected.has(group.id)} disabled={saving || !group.items.length}
                     onChange={() => toggleModule(group.id)} />
                   <span>{group.name}</span>
                   <small>{group.items.length} 条</small>
                 </label>
               ))}
             </div>
-          </fieldset>
+          </div>
           <div className="export-panel-footer">
             <p className="export-summary">{selected.size ? `${selected.size} 个模块 · ${count} 条新闻 · 高清 PNG` : '请选择至少一个模块'}</p>
             <button className="report-button report-button-primary export-submit" disabled={saving || !selected.size} onClick={download}>

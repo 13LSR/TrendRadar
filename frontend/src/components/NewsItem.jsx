@@ -8,16 +8,16 @@ export function NewsEntry({ item, number, children, compact = false }) {
       <div className="news-content">
         <div className="news-metadata">
           <span className="news-source">{item.source}</span>
-          {item.rank !== '-' && <span className="news-rank">RK:{item.rank}</span>}
-          {item.isNew && <span className="news-new">New_Signal</span>}
+          {item.rank && item.rank !== '-' && <span className="news-rank">来源排名 {item.rank}</span>}
+          {item.isNew && <span className="news-new">新增</span>}
         </div>
         <a className="news-title" href={item.url} target="_blank" rel="noopener noreferrer">
           {compact ? <h4>{item.title}</h4> : <h3>{item.title}</h3>}
         </a>
         {(item.time || item.views || children) && (
           <div className="news-details">
-            {item.time && <span><Clock size={12} aria-hidden="true" />{item.time}</span>}
-            {item.views && <span>{item.views}</span>}
+            {item.time && <span><Clock size={12} aria-hidden="true" />{item.time === 'JUST NOW' ? '本次新增' : item.time}</span>}
+            {item.views && item.views !== 'NEW' && <span>{item.views}</span>}
             {children}
           </div>
         )}
