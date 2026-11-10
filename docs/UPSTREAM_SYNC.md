@@ -1,0 +1,74 @@
+# 上游同步与本仓库定制
+
+## 本次迁移
+
+- 迁移日期：2026-11-10。
+- 上游：sansan0/TrendRadar，master，提交 8a316628215c53ad34b7200ecb0fba76de3ef6c7（6.11.0）。
+- origin 指向 13LSR/TrendRadar，upstream 指向 sansan0/TrendRadar。
+- backup/pre-upgrade-local-20261110 保存迁移前的本地代码及来源声明。
+- backup/pre-upstream-20261110 还包含迁移前已同步的远程 main 和全部旧新闻产物。
+- 升级分支：codex/upgrade-trendradar-6.11。
+
+原仓库重新初始化过 Git，没有与上游共享祖先。本次从上游创建升级分支，以保留双方父提交的合并接入旧仓库，再迁移定制代码。旧提交未重写，后续可以直接合并 upstream/master，无需再次使用 --allow-unrelated-histories。
+
+## 保留与适配
+
+| 原有内容 | 升级后的处理 |
+| --- | --- |
+| frontend/ 内的 React 页面 | 保留组件、样式和交互，继续使用锁定的依赖版本 |
+| main.py 内的 data.json 导出 | 移至 trendradar/report/frontend.py，通过新版报表入口调用 |
+| 根目录 index.html | 由前端构建维护，采集只刷新 JSON，不覆盖自定义页面 |
+| 原生 HTML 报告 | 保存在 output/index.html 及 output/html/ 下 |
+| 20 个平台、25 个词组 | 保留平台、词条、过滤词和组名，改用上游原生 [组名] 语法 |
+| 每日汇总、每小时采集 | 保留，改用 Python 3.12、uv.lock 和 python -m trendradar |
+| CNAME 自定义域名 | 保留 news.331106.xyz |
+| 历史 output/ 和最新 data.json | 原样保留，不用上游示例数据覆盖 |
+
+report.frontend_data_path: "data.json" 启用前端导出；设为空字符串则恢复上游覆盖根目录 HTML 的行为。该设置依赖 storage.formats.html: true。前端仍展示热榜分组；RSS、AI 分析与翻译可按需启用，原生报告承载其完整内容。
+
+旧版 TXT/HTML 历史文件仍可直接查看。新版使用 output/news/YYYY-MM-DD.db 累计每日数据；旧 TXT 未批量导入 SQLite，因此新版统计和 MCP 从升级后的采集记录开始。Actions 会提交 SQLite 文件，确保每次任务之间能延续当日数据。
+
+本仓库继续采用原有的每小时长期采集流程，不使用上游七天签到流程。上游的 Issue Guard 仅在原作者仓库启用。通知凭据继续从 GitHub Secrets 读取。
+
+## 本地验证
+
+需要 Python 3.12+、uv、Node.js 24。
+
+~~~bash
+uv sync --frozen --no-dev
+uv run --frozen --with pytest python -m pytest tests -q
+npm --prefix frontend ci
+npm --prefix frontend run build
+~~~
+
+构建完成后，将 frontend/dist/ 的内容复制到仓库根目录；不要将旧 data.json 放进 frontend/public/，以免构建覆盖最新采集数据。启动根目录静态服务，检查日报、主题、折叠、目录和截图按钮。
+
+运行 uv run python -m trendradar 会按配置采集并可能推送通知。本地只验证采集时，应先使用单独的配置文件关闭 notification.enabled；通过 CONFIG_PATH 指向该配置。不要把通知密钥写入提交。
+
+## 后续同步
+
+先提交自己的代码，确保 git status 干净，再执行以下步骤。分支名称中的日期需替换为本次更新日期。
+
+~~~bash
+git switch main
+git pull --ff-only origin main
+git branch backup/before-upstream-YYYYMMDD
+git fetch upstream
+git switch -c codex/update-upstream-YYYYMMDD
+git merge upstream/master
+~~~
+
+若有冲突，重点检查 config/config.yaml、config/frequency_words.txt、.github/workflows/crawler.yml、trendradar/context.py、trendradar/core/loader.py 和 trendradar/report/generator.py。配置要保留本仓库的平台、词组和 frontend_data_path，同时吸收新版字段。首页冲突应重新构建 React 页面。
+
+运行上面的验证命令后，提交冲突解决与适配结果，再合入 main：
+
+~~~bash
+git switch main
+git merge --ff-only codex/update-upstream-YYYYMMDD
+~~~
+
+确认需要更新远程后再执行 git push origin main。若期间自动采集产生新提交，先获取并合并 origin/main，处理数据产物冲突后再推送；不要强推。
+
+## 回退
+
+查看旧版可使用 git switch backup/pre-upstream-20261110。它包含本次迁移前的完整代码和产物。已公开的 main 不应通过强制重置改写历史；如需回退部署，应基于备份创建可审查的恢复提交。

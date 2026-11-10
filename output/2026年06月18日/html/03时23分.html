@@ -1,0 +1,3218 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>热点新闻分析</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <style>
+            * { box-sizing: border-box; }
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+                margin: 0; 
+                padding: 16px; 
+                background: #fafafa;
+                color: #333;
+                line-height: 1.5;
+            }
+            
+            .container {
+                max-width: 600px;
+                margin: 0 auto;
+                background: white;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+            }
+            
+            .header {
+                background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+                color: white;
+                padding: 32px 24px;
+                text-align: center;
+                position: relative;
+            }
+            
+            .save-buttons {
+                position: absolute;
+                top: 16px;
+                right: 16px;
+                display: flex;
+                gap: 8px;
+            }
+            
+            .save-btn {
+                background: rgba(255, 255, 255, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                color: white;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 500;
+                transition: all 0.2s ease;
+                backdrop-filter: blur(10px);
+                white-space: nowrap;
+            }
+            
+            .save-btn:hover {
+                background: rgba(255, 255, 255, 0.3);
+                border-color: rgba(255, 255, 255, 0.5);
+                transform: translateY(-1px);
+            }
+            
+            .save-btn:active {
+                transform: translateY(0);
+            }
+            
+            .save-btn:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+            
+            .header-title {
+                font-size: 22px;
+                font-weight: 700;
+                margin: 0 0 20px 0;
+            }
+            
+            .header-info {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+                font-size: 14px;
+                opacity: 0.95;
+            }
+            
+            .info-item {
+                text-align: center;
+            }
+            
+            .info-label {
+                display: block;
+                font-size: 12px;
+                opacity: 0.8;
+                margin-bottom: 4px;
+            }
+            
+            .info-value {
+                font-weight: 600;
+                font-size: 16px;
+            }
+            
+            .content {
+                padding: 24px;
+            }
+            
+            .word-group {
+                margin-bottom: 40px;
+            }
+            
+            .word-group:first-child {
+                margin-top: 0;
+            }
+            
+            .word-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 20px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid #f0f0f0;
+            }
+            
+            .word-info {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            
+            .word-name {
+                font-size: 17px;
+                font-weight: 600;
+                color: #1a1a1a;
+            }
+            
+            .word-count {
+                color: #666;
+                font-size: 13px;
+                font-weight: 500;
+            }
+            
+            .word-count.hot { color: #dc2626; font-weight: 600; }
+            .word-count.warm { color: #ea580c; font-weight: 600; }
+            
+            .word-index {
+                color: #999;
+                font-size: 12px;
+            }
+            
+            .news-item {
+                margin-bottom: 20px;
+                padding: 16px 0;
+                border-bottom: 1px solid #f5f5f5;
+                position: relative;
+                display: flex;
+                gap: 12px;
+                align-items: center;
+            }
+            
+            .news-item:last-child {
+                border-bottom: none;
+            }
+            
+            .news-item.new::after {
+                content: "NEW";
+                position: absolute;
+                top: 12px;
+                right: 0;
+                background: #fbbf24;
+                color: #92400e;
+                font-size: 9px;
+                font-weight: 700;
+                padding: 3px 6px;
+                border-radius: 4px;
+                letter-spacing: 0.5px;
+            }
+            
+            .news-number {
+                color: #999;
+                font-size: 13px;
+                font-weight: 600;
+                min-width: 20px;
+                text-align: center;
+                flex-shrink: 0;
+                background: #f8f9fa;
+                border-radius: 50%;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                align-self: flex-start;
+                margin-top: 8px;
+            }
+            
+            .news-content {
+                flex: 1;
+                min-width: 0;
+                padding-right: 40px;
+            }
+            
+            .news-item.new .news-content {
+                padding-right: 50px;
+            }
+            
+            .news-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 8px;
+                flex-wrap: wrap;
+            }
+            
+            .source-name {
+                color: #666;
+                font-size: 12px;
+                font-weight: 500;
+            }
+            
+            .rank-num {
+                color: #fff;
+                background: #6b7280;
+                font-size: 10px;
+                font-weight: 700;
+                padding: 2px 6px;
+                border-radius: 10px;
+                min-width: 18px;
+                text-align: center;
+            }
+            
+            .rank-num.top { background: #dc2626; }
+            .rank-num.high { background: #ea580c; }
+            
+            .time-info {
+                color: #999;
+                font-size: 11px;
+            }
+            
+            .count-info {
+                color: #059669;
+                font-size: 11px;
+                font-weight: 500;
+            }
+            
+            .news-title {
+                font-size: 15px;
+                line-height: 1.4;
+                color: #1a1a1a;
+                margin: 0;
+            }
+            
+            .news-link {
+                color: #2563eb;
+                text-decoration: none;
+            }
+            
+            .news-link:hover {
+                text-decoration: underline;
+            }
+            
+            .news-link:visited {
+                color: #7c3aed;
+            }
+            
+            .new-section {
+                margin-top: 40px;
+                padding-top: 24px;
+                border-top: 2px solid #f0f0f0;
+            }
+            
+            .new-section-title {
+                color: #1a1a1a;
+                font-size: 16px;
+                font-weight: 600;
+                margin: 0 0 20px 0;
+            }
+            
+            .new-source-group {
+                margin-bottom: 24px;
+            }
+            
+            .new-source-title {
+                color: #666;
+                font-size: 13px;
+                font-weight: 500;
+                margin: 0 0 12px 0;
+                padding-bottom: 6px;
+                border-bottom: 1px solid #f5f5f5;
+            }
+            
+            .new-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 8px 0;
+                border-bottom: 1px solid #f9f9f9;
+            }
+            
+            .new-item:last-child {
+                border-bottom: none;
+            }
+            
+            .new-item-number {
+                color: #999;
+                font-size: 12px;
+                font-weight: 600;
+                min-width: 18px;
+                text-align: center;
+                flex-shrink: 0;
+                background: #f8f9fa;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .new-item-rank {
+                color: #fff;
+                background: #6b7280;
+                font-size: 10px;
+                font-weight: 700;
+                padding: 3px 6px;
+                border-radius: 8px;
+                min-width: 20px;
+                text-align: center;
+                flex-shrink: 0;
+            }
+            
+            .new-item-rank.top { background: #dc2626; }
+            .new-item-rank.high { background: #ea580c; }
+            
+            .new-item-content {
+                flex: 1;
+                min-width: 0;
+            }
+            
+            .new-item-title {
+                font-size: 14px;
+                line-height: 1.4;
+                color: #1a1a1a;
+                margin: 0;
+            }
+            
+            .error-section {
+                background: #fef2f2;
+                border: 1px solid #fecaca;
+                border-radius: 8px;
+                padding: 16px;
+                margin-bottom: 24px;
+            }
+            
+            .error-title {
+                color: #dc2626;
+                font-size: 14px;
+                font-weight: 600;
+                margin: 0 0 8px 0;
+            }
+            
+            .error-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .error-item {
+                color: #991b1b;
+                font-size: 13px;
+                padding: 2px 0;
+                font-family: 'SF Mono', Consolas, monospace;
+            }
+            
+            .footer {
+                margin-top: 32px;
+                padding: 20px 24px;
+                background: #f8f9fa;
+                border-top: 1px solid #e5e7eb;
+                text-align: center;
+            }
+            
+            .footer-content {
+                font-size: 13px;
+                color: #6b7280;
+                line-height: 1.6;
+            }
+            
+            .footer-link {
+                color: #4f46e5;
+                text-decoration: none;
+                font-weight: 500;
+                transition: color 0.2s ease;
+            }
+            
+            .footer-link:hover {
+                color: #7c3aed;
+                text-decoration: underline;
+            }
+            
+            .project-name {
+                font-weight: 600;
+                color: #374151;
+            }
+            
+            @media (max-width: 480px) {
+                body { padding: 12px; }
+                .header { padding: 24px 20px; }
+                .content { padding: 20px; }
+                .footer { padding: 16px 20px; }
+                .header-info { grid-template-columns: 1fr; gap: 12px; }
+                .news-header { gap: 6px; }
+                .news-content { padding-right: 45px; }
+                .news-item { gap: 8px; }
+                .new-item { gap: 8px; }
+                .news-number { width: 20px; height: 20px; font-size: 12px; }
+                .save-buttons {
+                    position: static;
+                    margin-bottom: 16px;
+                    display: flex;
+                    gap: 8px;
+                    justify-content: center;
+                    flex-direction: column;
+                    width: 100%;
+                }
+                .save-btn {
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="save-buttons">
+                    <button class="save-btn" onclick="saveAsImage()">保存为图片</button>
+                    <button class="save-btn" onclick="saveAsMultipleImages()">分段保存</button>
+                </div>
+                <div class="header-title">热点新闻分析</div>
+                <div class="header-info">
+                    <div class="info-item">
+                        <span class="info-label">报告类型</span>
+                        <span class="info-value">实时分析</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">新闻总数</span>
+                        <span class="info-value">505 条</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">热点新闻</span>
+                        <span class="info-value">149 条</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">生成时间</span>
+                        <span class="info-value">06-18 03:23</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content">
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">宏观经济</div>
+                            <div class="word-count hot">61 条</div>
+                        </div>
+                        <div class="word-index">1/15</div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 最热</span><span class="rank-num top">1</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/articles/3774886" target="_blank" class="news-link">今夜全球瞩目，沃什“美联储首秀”会向市场扔炸弹吗？</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num top">1</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121212" target="_blank" class="news-link">美联储主席沃什：我们没有将决策结果外包给任何人。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num top">1</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025601094800" target="_blank" class="news-link">美联储主席沃什：对新的分析方法、民间数据以及官方数据改革均持开放态度。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">4</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num top">2</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121211" target="_blank" class="news-link">美联储主席沃什：我们在过去两天的（FOMC货币政策）讨论中出现了不错的家庭内斗。
+
+当讨论结束后，我们处于一个更好的政策状态。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">5</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num top">2</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025449794800" target="_blank" class="news-link">美联储主席沃什：我认为经过讨论后，我们最终达成了一个更好的结果。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">6</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num top">3</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121210" target="_blank" class="news-link">美联储主席沃什：当针对未来数据做反应时，市场表现是最佳的。
+
+市场价格可能是最重要的（参考）信息。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">7</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num top">3</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025436511800" target="_blank" class="news-link">美联储主席沃什：我们就此进行了一场很好的内部讨论。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">8</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num high">4</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025411817800" target="_blank" class="news-link">美联储主席沃什：今天只有一项政策提案摆在桌面上。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">9</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">知乎</span><span class="rank-num high">4</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.zhihu.com/question/2050336798279034583" target="_blank" class="news-link">必胜客被卖了，百胜中国 12 亿美元收购中国大陆品牌所有权，卖身原因有哪些？如何看待其中国市场前景？</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">10</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num high">5</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-17/%E6%AC%A7%E8%82%A1%E5%85%A8%E7%BA%BF%E4%B8%8A%E6%B6%A8-%E7%BE%8E%E5%85%83%E6%8C%87%E6%95%B0%E4%B8%8B%E8%B7%8C%E9%BB%84%E9%87%91%E6%8C%81%E7%A8%B3-0f3937" target="_blank" class="news-link">欧股全线上涨 美元指数下跌黄金持稳</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">11</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num high">5</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121208" target="_blank" class="news-link">美联储主席沃什：我们错过通胀目标的时间已经长达五年，将解决这个问题。
+
+我们得到的大多数数据源自过时的调查方式。
+
+私人公司处理实时信息。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">12</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">卫星通讯社</span><span class="rank-num ">6</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://sputniknews.cn/20260618/1071912944.html" target="_blank" class="news-link">特朗普：美国应归还伊朗资产 否则没人再会投资美元</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">13</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">6</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121207" target="_blank" class="news-link">美联储主席沃什：新闻发布会可以是非常有用的沟通方式。
+
+希望（通过新闻发布会）向媒体透露某些重要信息。
+
+对新闻发布会进行一些调整可能会是有价值的。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">14</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">6</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025257050800" target="_blank" class="news-link">沃什首份政策声明：降息退出，加息仍存悬念</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">15</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">7</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025250943800" target="_blank" class="news-link">美联储主席沃什：当市场过于关注美联储的反应机制时，效率会降低。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">16</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">参考消息</span><span class="rank-num ">8</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://ckxxapp.ckxx.net/pages/2026/06/17/f6d0a55db4704db58beb7cd41c1d064a.html" target="_blank" class="news-link">国际货币基金组织总裁：全球经济尚无放缓迹象</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">17</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 最热</span><span class="rank-num ">8</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/articles/3774866" target="_blank" class="news-link">美联储内部鸽派集体转鹰，沃什首秀“左右为难”</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">18</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">8</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121205" target="_blank" class="news-link">美联储主席沃什：美联储（货币政策）的限制性是不均衡的。
+
+住房市场表明，美联储政策在一定程度上具有限制性。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">19</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">8</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025239567800" target="_blank" class="news-link">美联储主席沃什：金融市场价格是指导央行家最重要的信息来源。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">20</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">9</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121204" target="_blank" class="news-link">美联储主席沃什：我们已经抛弃了前瞻指引。
+
+现在，某些人认为前瞻指引不正确。
+
+我无法就即将做什么给出任何前瞻指引。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">21</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">9</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025225859800" target="_blank" class="news-link">美联储主席沃什：金融市场在对数据做出反应时表现最佳。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">22</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">10</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121203" target="_blank" class="news-link">美联储主席沃什：2%的通胀目标是美联储的长期目标。
+
+只要没实现，就没理由重新评估这个通胀目标。
+
+2%通胀目标将不会是通胀工作组的职责。
+
+我们能够实现通胀目标，将恪守承诺。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">23</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">微博</span><span class="rank-num ">10</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://s.weibo.com/weibo?q=%E7%BE%8E%E8%81%94%E5%82%A8&amp;t=31&amp;band_rank=10&amp;Refer=top" target="_blank" class="news-link">美联储</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">24</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">11</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025121032800" target="_blank" class="news-link">美联储主席沃什：我对新的数据来源持开放态度。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">25</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">12</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-17/%E9%99%86%E5%AE%B6%E5%98%B4%E8%AE%BA%E5%9D%9B%E5%AE%A3%E5%B8%83%E7%A6%BB%E5%B2%B8%E4%BA%BA%E6%B0%91%E5%B8%81%E5%A4%96%E6%B1%87%E4%BA%A4%E6%98%93%E8%AF%95%E7%82%B9-5d002d" target="_blank" class="news-link">陆家嘴论坛宣布离岸人民币外汇交易试点</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">26</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">12</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121201" target="_blank" class="news-link">美国两年期国债收益率涨10个基点，刷新日高至4.15%，沃什正在美联储举行新闻发布会。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">27</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">12</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025115126800" target="_blank" class="news-link">美联储主席沃什：我们收到的一些经济数据可能只是历史的回声。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">28</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">13</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025049434800" target="_blank" class="news-link">美联储主席沃什：私营公司依赖实时信息。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">29</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">14</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121199" target="_blank" class="news-link">美联储主席沃什：我和同事们履行法定职责。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">30</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">14</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025047616800" target="_blank" class="news-link">美联储主席沃什：如果美联储数据工作组有关于如何改善官方统计的建议，我会持开放态度。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">31</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">15</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121198" target="_blank" class="news-link">美联储主席沃什：这次会议体现了美联储的最佳传统。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">32</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">15</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025031949800" target="_blank" class="news-link">策略师：美联储明显转鹰 表明官员并不认为美伊协议会显著缓解价格压力</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">33</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">16</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121197" target="_blank" class="news-link">WTI 7月原油期货收报76.79美元/桶。
+
+NYMEX 7月天然气期货收报3.1450美元/百万英热单位。
+
+NYMEX 7月汽油期货收报2.9096美元/加仑，NYMEX 7月取暖油期货收报3.1946美元/加仑。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">34</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">16</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618024943630800" target="_blank" class="news-link">美联储主席沃什：我们所使用的大多数数据都采用了过时的调查方法。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">35</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">澎湃新闻</span><span class="rank-num ">17</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://m.thepaper.cn/newsDetail_forward_33397624" target="_blank" class="news-link">宣布六项政策，央行行长潘功胜详解中国金融结构变迁和金融市场现代化</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">36</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">17</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121196" target="_blank" class="news-link">美联储主席凯文·沃什在新闻发布会上表示：重返美联储是一种荣幸。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">37</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">17</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618024930871800" target="_blank" class="news-link">美联储主席沃什：我们已经五年未能实现通胀目标，现在要着手纠正。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">38</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">18</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121195" target="_blank" class="news-link">上期所原油期货2608合约夜盘收涨0.80%，报517元人民币/桶。
+
+沪金夜盘收跌0.84%，沪银收跌1.36%。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">39</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">19</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121194" target="_blank" class="news-link">德意志银行首席美国经济学家Luzzetti：这处于预期中鹰派的一端。
+
+决议声明包含大量冗余内容。（彭博电视）</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">40</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">19</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618024918862800" target="_blank" class="news-link">美联储主席沃什：声明中包含了我们准备就通胀问题所作的表述。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">41</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">今日头条</span><span class="rank-num ">20</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.toutiao.com/trending/7652346288553332230/" target="_blank" class="news-link">博主：A股正在发生三大结构性逆转</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">42</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">20</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618024908771800" target="_blank" class="news-link">美联储主席沃什：实现2%通胀目标的承诺是坚定、一致且明确的。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">43</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">21</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121192" target="_blank" class="news-link">提醒：北京时间02:30，美联储主席凯文·沃什将举行新闻发布会。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">44</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">21</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618024846006800" target="_blank" class="news-link">美联储主席沃什：其中一些变化可能就是新闻发布会。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">45</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">21</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/965/665.htm" target="_blank" class="news-link">技嘉 40 周年纪念版 RTX 5090 AORUS Infinity 上架，售价 5299 美元约为公版 2.6 倍</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">46</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">今日头条</span><span class="rank-num ">22</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.toutiao.com/trending/7652205334456025130/" target="_blank" class="news-link">多家A股公司提示风险</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">47</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">22</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121191" target="_blank" class="news-link">摩根大通MICHELE：美联储在告诉我们政策并非处于中性状态。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">48</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">22</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618024828315800" target="_blank" class="news-link">美联储主席沃什：我预计将会有更多变化。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">49</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">22</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/965/664.htm" target="_blank" class="news-link">维信诺遭“乾派文化”旗下账号发布视频诋毁，一审判令后者公开道歉并赔偿经济损失</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">50</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">23</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121190" target="_blank" class="news-link">“新美联储通讯社”：美联储明显鹰派，政策声明大改</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">51</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">23</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618024811818800" target="_blank" class="news-link">美联储主席沃什暗示未来的新闻发布会可能取决于具体的沟通目标。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">52</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">24</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121189" target="_blank" class="news-link">原美联储副主席、太平洋投资管理公司（PIMCO，品浩）全球经济顾问克拉里达：主席沃什没有给出点阵图看法不足为奇。（彭博电视）</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">53</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">24</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618024806199800" target="_blank" class="news-link">美联储主席沃什：未来的一些变化或许值得召开新闻发布会。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">54</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">24</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/965/661.htm" target="_blank" class="news-link">苹果 1.62 亿美元抄底办公楼：折价近 27%，硅谷不动产版图再扩张</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">55</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">25</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121187" target="_blank" class="news-link">美联储决议声明发布后，标普跌超0.3%，纳指跌超0.2%。
+
+美元指数5分钟内上涨0.3327，报99.9866。
+
+现货黄金从日高4382.28美元附近跳水至4278美元下方，瞬间转而跌超1%。
+
+美国两年期国债收益率从4.05%附近瞬间飙升，涨穿4.14%刷新日高。
+
+在美联储点阵图调整后，交易员押注美联储将更大幅度收紧政策。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">56</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num ">25</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618024751537800" target="_blank" class="news-link">美联储主席沃什：新闻发布会是沟通的非常有效方式。（但）希望在新闻发布会上传达重要信息。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">57</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">26</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121186" target="_blank" class="news-link">美联储：下调今年美国经济增速预期</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">58</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">27</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121185" target="_blank" class="news-link">美联储：下调今年美国失业率预期，维持后续预期不变</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">59</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">28</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121184" target="_blank" class="news-link">美联储：上调核心PCE通胀预期</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">60</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">29</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121183" target="_blank" class="news-link">点阵图：美联储上调2026-28年利率预期，维持长期利率预期不变</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">61</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">30</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121182" target="_blank" class="news-link">美联储按兵不动，一名FOMC成员没有给出利率点阵图信息，九人预计今年加息</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">通用 AI 技术</div>
+                            <div class="word-count hot">43 条</div>
+                        </div>
+                        <div class="word-index">2/15</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num top">1</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed701-8726-7dd8-b062-7617aebdb0e4" target="_blank" class="news-link">President Trump said it would be &quot;a bit unfair&quot; if other countries possess ballistic missiles while Iran has none.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num top">2</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed700-fe56-7dd8-b062-6f2669e5c622" target="_blank" class="news-link">Fed chair Kevin Warsh said the Fed meeting had been a fairly cordial few days.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num top">3</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed700-8050-7dd8-b062-62c69236c973" target="_blank" class="news-link">Federal Reserve Chairman Kevin Warsh said some view current conditions as acceptable, but many have expressed strong interest in substantive reform of the Fed&#x27;s Summary of Economic Projections.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">4</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num high">5</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6ff-d478-7dd8-b062-55c984b86124" target="_blank" class="news-link">Federal Reserve Chairman Kevin Warsh said he would not be surprised if a new communication framework or adjustments to the Fed’s Summary of Economic Projections emerge by year-end; until then he expects colleagues to continue submitting their forecasts.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">5</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">6</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6ff-952a-7dd8-b062-4e7ebc315710" target="_blank" class="news-link">Kevin Warsh said the Federal Open Market Committee (FOMC) has committed to provide projections and is expected to honor that commitment.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">6</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 最热</span><span class="rank-num ">6</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/articles/3774852" target="_blank" class="news-link">悬在市场上空的“三大利空”：沃什“鹰鸽不明”，AI“武器化监管”，美股史上最大股票发行潮</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">7</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">知乎</span><span class="rank-num ">6</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.zhihu.com/question/2050618204980863708" target="_blank" class="news-link">HR 吐槽面试遇到豆包味很浓的应届生，全程依赖豆包 AI 作答，如何看待这一现象？暴露出哪些问题？</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">8</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">6</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7651268339474202643" target="_blank" class="news-link">从“生成一篇知识点”到“面对面讲清一道题”：我用魔珐星云改造 AI 教育助手的实践</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">9</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">7</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-17/%E4%BA%9A%E7%BB%86%E5%AE%89%E5%AE%98%E5%91%98%E5%91%BC%E5%90%81%E9%81%BF%E5%85%8Dai%E6%95%B0%E6%8D%AE%E6%94%BF%E7%AD%96%E8%BF%87%E4%B8%A5-86dccb" target="_blank" class="news-link">亚细安官员呼吁避免AI数据政策过严</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">10</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">7</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7651529231939878953" target="_blank" class="news-link">TRAE AI创造力大赛，正式启动！</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">11</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">8</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fe-a879-7dd8-b062-3f2fc52b88d0" target="_blank" class="news-link">Fed Chair Kevin Warsh said more information will be available at the meeting in six weeks.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">12</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">8</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-17/%E6%B8%AF%E5%BA%9C%E8%A6%81%E6%B1%82%E6%95%99%E8%82%B2%E5%AD%A6%E7%94%9F%E4%B8%8D%E5%BE%97%E7%94%A8ai%E5%8D%B1%E5%AE%B3%E5%9B%BD%E5%AE%89-07f638" target="_blank" class="news-link">港府要求教育学生不得用AI危害国安</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">13</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">9</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fe-919c-7dd8-b062-321a6b92eba8" target="_blank" class="news-link">Federal Reserve Chair Kevin Warsh said that, based on his observations at the meeting (reflected in the projections), his understanding is that roughly half his colleagues favor lower interest rates and the other half favor higher rates.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">14</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">10</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fd-fb6c-7dd8-b062-2dbaf0d1f4ec" target="_blank" class="news-link">President Trump said the United States may maintain a military presence in the Gulf region for some time.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">15</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">11</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fd-b402-7dd8-b062-27a1a9facfb1" target="_blank" class="news-link">Fed Chair Kevin Warsh said a new communications framework before year-end would not be surprising.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">16</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">11</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121202" target="_blank" class="news-link">美联储主席沃什：任命五个货币政策领域的特别工作组。
+
+包括沟通、资产负债表、数据源、生产力、就业。
+
+生产力工作组将审查人工智能（AI）的影响。
+
+通胀工作组将检查通胀的驱动因素。
+
+资产负债表工作组将评估合适的储备职责。
+
+预期沟通工作组将围绕经济预期概要（SEP）的调整提供建议，未来数周将开始工作。
+
+预计所有工作组都将在年底之前完成，或大部分完成。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">17</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">12</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fd-a44f-7dd8-b062-1b8f077121a3" target="_blank" class="news-link">U.S. President Trump said the Iran agreement will be signed within the next 48 hours.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">18</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">知乎</span><span class="rank-num ">12</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.zhihu.com/question/2050269478747889665" target="_blank" class="news-link">如果我们生活在 AI 构建的虚拟世界里，随手抛一枚均匀硬币，正面朝上的概率还是现实中公认的「50%」吗？</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">19</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">13</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fd-8b58-7dd8-b062-10dc7adf29dd" target="_blank" class="news-link">Trump said the Fed keeping rates unchanged is fine and that a Fed rate hike could happen.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">20</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">知乎</span><span class="rank-num ">13</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.zhihu.com/question/2046913494243435264" target="_blank" class="news-link">如何理解韩国作家金爱烂所说的：「人类拥有而 AI 没有的一样东西，是犹豫不决」？</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">21</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">14</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fc-b98b-7dd8-b062-08dc3a72fd96" target="_blank" class="news-link">Iranian state news agency said, per the memorandum of understanding text, the U.S. and Iran committed to reach a final agreement within 60 days of negotiations; the period may be extended.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">22</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">澎湃新闻</span><span class="rank-num ">15</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://m.thepaper.cn/newsDetail_forward_33396659" target="_blank" class="news-link">中国正加紧筹建世界人工智能合作组织</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">23</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">15</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fc-48b3-7dd8-b062-04a63224497a" target="_blank" class="news-link">Iran&#x27;s state news agency reported the MoU text states the U.S. and Iran will not interfere in each other&#x27;s internal affairs.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">24</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">16</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7651188400656629787" target="_blank" class="news-link">AI 时代，前端工程师的话语权正在下降？</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">25</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">17</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fb-b632-7dd8-b061-f7aeb1f56d8e" target="_blank" class="news-link">Federal Reserve Chair Kevin Warsh said the central bank will strive to be a good steward of taxpayer funds.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">26</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">知乎</span><span class="rank-num ">17</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.zhihu.com/question/2050515273640423854" target="_blank" class="news-link">SpaceX 上市第三天市值逼近 3 万亿美元，豪掷 600 亿收购 Cursor 加码 AI，这笔天价收购划算吗？</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">27</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">18</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fb-39c3-7dd8-b061-ee7ee26c1ecd" target="_blank" class="news-link">Fed Chair Kevin Warsh said the Fed&#x27;s Inspector General will issue a report later this summer.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">28</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">知乎</span><span class="rank-num ">18</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.zhihu.com/question/1906023807417811104" target="_blank" class="news-link">AI Agent 的核心技术是什么？</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">29</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">19</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fb-37cc-7dd8-b061-e45e0b7ea8f9" target="_blank" class="news-link">Federal Reserve Chair Kevin Warsh, when asked about renovations to the Fed headquarters, said he has met with the inspector general.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">30</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">19</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7651930056574517289" target="_blank" class="news-link">Android 17 正式版发布，全新 AI 和各种破坏性更新</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">31</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">20</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fa-b28a-7dd8-b061-da6916621bb8" target="_blank" class="news-link">Federal Reserve Chair Kevin Warsh said the Fed will not hesitate to make statistical recommendations to executive-branch agencies.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">32</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">20</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7651192027644624948" target="_blank" class="news-link">别再把 AI Agent 当作聊天机器人了</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">33</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">22</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fa-13f0-7dd8-b061-c9b16ba38323" target="_blank" class="news-link">Federal Reserve Chair Kevin Warsh said the goal is not to completely overhaul the national accounts system.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">34</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">23</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f9-27af-7dd8-b061-c7e3329da6c6" target="_blank" class="news-link">Fed Chair Kevin Warsh said policymakers are focused on the demand-side effects of AI, while supply-side impacts remain less certain.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">35</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">23</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/965/662.htm" target="_blank" class="news-link">2999 元：联想 AI 主机 MINI 开售，号称“AI 原生个人家庭边缘设备”、预装天禧 Claw</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">36</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">24</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f8-14db-7dd8-b061-bf7d3db9963e" target="_blank" class="news-link">Federal Reserve Chairman Kevin Warsh said none of the 19 thought monetary policy needed to be tightened today.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">37</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">25</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f7-34ef-7dd8-b061-b5fb254ae7ee" target="_blank" class="news-link">Federal Reserve Chair KEVIN WARSH said more work remains to achieve price stability.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">38</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">26</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f7-1677-7dd8-b061-ae2cf3427184" target="_blank" class="news-link">Fed Chair Kevin Warsh said he does not believe the Fed faces a stark choice between full employment and price stability.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">39</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">27</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f6-e0e6-7dd8-b061-a69f751bb23d" target="_blank" class="news-link">Federal Reserve Chairman Kevin Warsh said it is difficult to say policy is restrictive anywhere except in the housing market.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">40</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">28</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f6-dbc8-7dd8-b061-9f455657911c" target="_blank" class="news-link">Federal Reserve Chairman Kevin Warsh said monetary policy effects are uneven.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">41</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">28</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7651192027644952628" target="_blank" class="news-link">不能用公司的打包机，AI帮我实现了一套比打包机更好用的Android包构建/分发流程</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">42</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">29</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f5-34f8-7dd8-b061-93d42a2c4a67" target="_blank" class="news-link">Fed Chair Kevin Warsh said artificial intelligence presents both opportunities and risks.</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">43</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">MKT新闻</span><span class="rank-num ">30</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f4-e95a-7dd8-b061-8ee9e349dec5" target="_blank" class="news-link">Fed chair Kevin Warsh said the committee discussed productivity and artificial intelligence today.</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">科技前沿</div>
+                            <div class="word-count hot">16 条</div>
+                        </div>
+                        <div class="word-index">3/15</div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num top">1</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/SPCX" target="_blank" class="news-link">SpaceX</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num top">2</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/MU" target="_blank" class="news-link">美光科技</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">百度热搜</span><span class="rank-num top">3</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.baidu.com/s?wd=%E4%B8%AD%E5%9B%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%BC%80%E5%A7%8B%E6%B2%BB%E7%90%86%E6%B2%99%E6%BC%A0%E4%BA%86" target="_blank" class="news-link">中国机器人开始治理沙漠了</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">4</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 最热</span><span class="rank-num top">3</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/articles/3774774" target="_blank" class="news-link">市场静待沃什&quot;首秀&quot;，美股指涨跌互现，道指再新高，科技股承压，美油跌近6%</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">5</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 最热</span><span class="rank-num high">4</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/articles/3774887" target="_blank" class="news-link">市场静待沃什首秀，美股指走高，半导体股多数上涨，SpaceX跌幅扩大至4%，油价涨1%</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">6</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num high">4</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/MRVL" target="_blank" class="news-link">迈威尔科技</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">7</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 最热</span><span class="rank-num high">5</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/articles/3774826" target="_blank" class="news-link">SpaceX上市后股价飙升49%，市值超越亚马逊，逼近微软，股票期权开始交易</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">8</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">9</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7651145221669355571" target="_blank" class="news-link">腾讯云一键部署OpenClaw打造QQ机器人</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">9</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">澎湃新闻</span><span class="rank-num ">10</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://m.thepaper.cn/newsDetail_forward_33396142" target="_blank" class="news-link">星舰女王？SpaceX华裔女工程师辟谣：没有硕博学位，仅是飞控操作员之一</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">10</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">抖音</span><span class="rank-num ">15</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.douyin.com/hot/2538327" target="_blank" class="news-link">人开始扮演仿生机器人了</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">11</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">17</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7651610218149707782" target="_blank" class="news-link">SpaceX 收购 Cursor，马斯克花600亿美元买了个代码编辑器</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">12</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">20</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/965/666.htm" target="_blank" class="news-link">预计 2030 年产能达 50 万台套：京津冀首个万台级具身智能机器人超级工厂规模投用</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">13</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">23</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-17/%E7%87%A7%E5%8E%9F%E7%A7%91%E6%8A%80%E4%B8%8E%E7%B2%A4%E8%8A%AF%E5%8D%8A%E5%AF%BC%E4%BD%93%E7%A7%91%E5%88%9B%E6%9D%BFipo%E5%B0%86%E4%BA%8E6%E6%9C%8815%E6%97%A5%E4%B8%8A%E4%BC%9A-c88707" target="_blank" class="news-link">燧原科技与粤芯半导体科创板IPO将于6月15日上会</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">14</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num ">23</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/SZ300476" target="_blank" class="news-link">胜宏科技</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">15</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">26</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-17/%E5%8F%B0%E6%B9%BE%E5%8D%8A%E5%AF%BC%E4%BD%93%E4%BA%A7%E4%B8%9A%E5%8F%8C%E7%BA%BF%E6%8C%BA%E8%BF%9B%E6%AC%A7%E6%B4%B2-%E8%8E%B7%E8%8B%B1%E5%BE%B7%E5%AE%98%E6%96%B9%E5%8A%9B%E6%8C%BA-8e11ce" target="_blank" class="news-link">台湾半导体产业双线挺进欧洲 获英德官方力挺</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">16</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">28</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/965/656.htm" target="_blank" class="news-link">东风奕派 M8 汽车官宣搭载「全置换新风系统」，宣称有“诺贝尔奖级黑科技”加持</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">时政要闻</div>
+                            <div class="word-count hot">11 条</div>
+                        </div>
+                        <div class="word-index">4/15</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">卫星通讯社</span><span class="rank-num top">1</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://sputniknews.cn/20260618/1071911146.html" target="_blank" class="news-link">印度国防部：印度武器生产规模创历史新高，超180亿美元</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">凤凰网</span><span class="rank-num top">2</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://news.ifeng.com/c/8u20dDE65U5" target="_blank" class="news-link">中方在美菲压力下撤出黄岩岛设施？外交部回应</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">金十数据</span><span class="rank-num high">5</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://flash.jin10.com/detail/20260618025329469800" target="_blank" class="news-link">据伊朗SNN通讯社：伊朗外交部发言人表示，美国已承诺根据即将进行的谈判取消对伊朗的所有类型制裁。</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">4</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">凤凰网</span><span class="rank-num ">6</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://news.ifeng.com/c/8u21DLM7oTN" target="_blank" class="news-link">外交部：敦促日方给出一个交代</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">5</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">参考消息</span><span class="rank-num ">12</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://ckxxapp.ckxx.net/pages/2026/06/17/20ba79d2db5c4057bb5994879b6558db.html" target="_blank" class="news-link">香港启动首个五年规划公众咨询</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">6</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">14</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-17/%E4%B8%AD%E5%9B%BD%E5%9B%BD%E9%98%B2%E9%83%A8%E9%A9%B3%E6%96%A5%E6%97%A5%E6%9C%AC%E7%99%BD%E7%9A%AE%E4%B9%A6%E5%B9%B6%E6%8C%87%E5%85%B6%E5%8A%A0%E9%80%9F%E5%86%8D%E5%86%9B%E4%BA%8B%E5%8C%96-d02ab6" target="_blank" class="news-link">中国国防部驳斥日本白皮书并指其加速再军事化</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">7</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">靠谱新闻</span><span class="rank-num ">16</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://kaopu.news/story/2026-06-17/%E5%8F%B0%E7%BE%8E%E5%AE%98%E5%91%98%E4%BA%92%E5%8A%A8%E9%A2%91%E7%B9%81-%E5%8F%B0%E6%B9%BE%E5%9B%BD%E9%99%85%E5%8F%82%E4%B8%8E%E5%86%8D%E9%81%87%E9%98%BB%E7%A2%8D-4f6f0f" target="_blank" class="news-link">台美官员互动频繁 台湾国际参与再遇阻碍</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">8</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">参考消息</span><span class="rank-num ">17</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://ckxxapp.ckxx.net/pages/2026/06/17/f18ccae685fe411fb286b060a048984a.html" target="_blank" class="news-link">学者：研究东南亚，中美路径不同</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">9</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">卫星通讯社</span><span class="rank-num ">19</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://sputniknews.cn/20260618/1071910492.html" target="_blank" class="news-link">俄外交部无任所大使：俄将向国际组织转达有关乌军袭击载有儿童的巴士信息</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">10</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">华尔街见闻 快讯</span><span class="rank-num ">20</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://wallstreetcn.com/livenews/3121193" target="_blank" class="news-link">伊朗外交部称伊方前往瑞士会谈的计划未变</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">11</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">百度热搜</span><span class="rank-num ">22</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.baidu.com/s?wd=%E8%82%AF%E5%B0%BC%E4%BA%9A%EF%BC%9A%E8%B0%81%E6%8B%BF%E5%8F%B0%E6%B9%BE%E6%8A%A4%E7%85%A7%E8%B0%81%E8%BF%9D%E6%B3%95" target="_blank" class="news-link">肯尼亚：谁拿台湾护照谁违法</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">中美科技巨头</div>
+                            <div class="word-count ">4 条</div>
+                        </div>
+                        <div class="word-index">5/15</div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num top">1</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/965/691.htm" target="_blank" class="news-link">苹果新推荐功能引争议，App Store 被曝记录用户所有点击</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">7</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/965/681.htm" target="_blank" class="news-link">让换机更容易：谷歌 Android 17 系统将支持迁移苹果 iOS 通行密钥、Wi-Fi 记录、RCS 信息等</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">3</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">12</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7651505036707512383" target="_blank" class="news-link">由于 iOS 26 的键盘变化，Flutter 又要重构键盘区域逻辑</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">4</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">22</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7651532321192362030" target="_blank" class="news-link">Mac 软件推荐</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">大模型 &amp; AI</div>
+                            <div class="word-count ">2 条</div>
+                        </div>
+                        <div class="word-index">6/15</div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num high">4</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7650809417412509732" target="_blank" class="news-link">面试官坏笑：“你用 AI 编程一年了，怎么保证 Claude Code 写出来的代码是对的？”我：“直接上 Claude Fable 5 啊！”</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">19</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/965/667.htm" target="_blank" class="news-link">谷歌推出新一代 Google Home 智能音箱：搭载 Gemini AI 助手，售 100 美元</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">微软 Microsoft Xbox</div>
+                            <div class="word-count ">2 条</div>
+                        </div>
+                        <div class="word-index">7/15</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num ">19</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/MSFT" target="_blank" class="news-link">微软</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num ">29</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7651166333071343662" target="_blank" class="news-link">Compose 终于上线 FlexBox：换行与弹性伸缩 都轻松搞定！</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">AMD</div>
+                            <div class="word-count ">2 条</div>
+                        </div>
+                        <div class="word-index">8/15</div>
+                    </div>
+                    <div class="news-item new">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num ">22</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/AMD" target="_blank" class="news-link">AMD</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">26</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/965/658.htm" target="_blank" class="news-link">AMD 显卡 HDMI 2.1 FRL 初步支持已被合并到 Linux 7.2 内核</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">国产硬科技</div>
+                            <div class="word-count ">2 条</div>
+                        </div>
+                        <div class="word-index">9/15</div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">酷安</span><span class="rank-num top">1</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.coolapk.com/feed/72390480" target="_blank" class="news-link">鸿蒙智行辟谣：昆明高速事故车辆并非旗下车型</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">2</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num top">3</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7650935690218209321" target="_blank" class="news-link">解析华为 DevEco Code 和小米 MiMo Code，都基于 OpenCode ，有什么区别？</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">谷歌 Google Gemini DeepMind</div>
+                            <div class="word-count ">1 条</div>
+                        </div>
+                        <div class="word-index">10/15</div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">18</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/965/668.htm" target="_blank" class="news-link">谷歌用 4000 行 Rust 代码重写：Android 17 引入 ADB Wi-Fi 2.0，彻底重写无线调试堆栈解决断连痛点</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">英伟达 NVIDIA 黄仁勋</div>
+                            <div class="word-count ">1 条</div>
+                        </div>
+                        <div class="word-index">11/15</div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num top">3</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/NVDA" target="_blank" class="news-link">英伟达</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">特斯拉 Tesla 马斯克</div>
+                            <div class="word-count ">1 条</div>
+                        </div>
+                        <div class="word-index">12/15</div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">雪球</span><span class="rank-num ">13</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://xueqiu.com/s/TSLA" target="_blank" class="news-link">特斯拉</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">DeepSeek 梁文锋</div>
+                            <div class="word-count ">1 条</div>
+                        </div>
+                        <div class="word-index">13/15</div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">掘金</span><span class="rank-num top">1</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://juejin.cn/post/7651461757568811060" target="_blank" class="news-link">又是梁文锋，有点猛啊。</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">比亚迪 王传福</div>
+                            <div class="word-count ">1 条</div>
+                        </div>
+                        <div class="word-index">14/15</div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">微博</span><span class="rank-num ">30</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://s.weibo.com/weibo?q=%23%E6%AF%94%E4%BA%9A%E8%BF%AA%E5%A4%A7%E5%94%9023.99%E4%B8%87%E8%B5%B7%E4%B8%8A%E5%B8%82%23&amp;t=31&amp;band_rank=30&amp;Refer=top" target="_blank" class="news-link">比亚迪大唐23.99万起上市</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="word-group">
+                    <div class="word-header">
+                        <div class="word-info">
+                            <div class="word-name">航天</div>
+                            <div class="word-count ">1 条</div>
+                        </div>
+                        <div class="word-index">15/15</div>
+                    </div>
+                    <div class="news-item ">
+                        <div class="news-number">1</div>
+                        <div class="news-content">
+                            <div class="news-header">
+                                <span class="source-name">IT之家</span><span class="rank-num ">17</span><span class="time-info">03时23分</span>
+                            </div>
+                            <div class="news-title"><a href="https://www.ithome.com/0/965/669.htm" target="_blank" class="news-link">美货运“龙”飞船携科研样品返回地球，含生物打印的器官和软骨组织等</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="new-section">
+                    <div class="new-section-title">本次新增热点 (共 91 条)</div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">百度热搜 · 1条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank ">22</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.baidu.com/s?wd=%E8%82%AF%E5%B0%BC%E4%BA%9A%EF%BC%9A%E8%B0%81%E6%8B%BF%E5%8F%B0%E6%B9%BE%E6%8A%A4%E7%85%A7%E8%B0%81%E8%BF%9D%E6%B3%95" target="_blank" class="news-link">肯尼亚：谁拿台湾护照谁违法</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">卫星通讯社 · 2条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank top">1</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://sputniknews.cn/20260618/1071911146.html" target="_blank" class="news-link">印度国防部：印度武器生产规模创历史新高，超180亿美元</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank ">6</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://sputniknews.cn/20260618/1071912944.html" target="_blank" class="news-link">特朗普：美国应归还伊朗资产 否则没人再会投资美元</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">MKT新闻 · 26条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank top">1</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed701-8726-7dd8-b062-7617aebdb0e4" target="_blank" class="news-link">President Trump said it would be &quot;a bit unfair&quot; if other countries possess ballistic missiles while Iran has none.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank top">2</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed700-fe56-7dd8-b062-6f2669e5c622" target="_blank" class="news-link">Fed chair Kevin Warsh said the Fed meeting had been a fairly cordial few days.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">3</div>
+                            <div class="new-item-rank top">3</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed700-8050-7dd8-b062-62c69236c973" target="_blank" class="news-link">Federal Reserve Chairman Kevin Warsh said some view current conditions as acceptable, but many have expressed strong interest in substantive reform of the Fed&#x27;s Summary of Economic Projections.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">4</div>
+                            <div class="new-item-rank high">5</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6ff-d478-7dd8-b062-55c984b86124" target="_blank" class="news-link">Federal Reserve Chairman Kevin Warsh said he would not be surprised if a new communication framework or adjustments to the Fed’s Summary of Economic Projections emerge by year-end; until then he expects colleagues to continue submitting their forecasts.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">5</div>
+                            <div class="new-item-rank ">6</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6ff-952a-7dd8-b062-4e7ebc315710" target="_blank" class="news-link">Kevin Warsh said the Federal Open Market Committee (FOMC) has committed to provide projections and is expected to honor that commitment.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">6</div>
+                            <div class="new-item-rank ">8</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fe-a879-7dd8-b062-3f2fc52b88d0" target="_blank" class="news-link">Fed Chair Kevin Warsh said more information will be available at the meeting in six weeks.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">7</div>
+                            <div class="new-item-rank ">9</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fe-919c-7dd8-b062-321a6b92eba8" target="_blank" class="news-link">Federal Reserve Chair Kevin Warsh said that, based on his observations at the meeting (reflected in the projections), his understanding is that roughly half his colleagues favor lower interest rates and the other half favor higher rates.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">8</div>
+                            <div class="new-item-rank ">10</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fd-fb6c-7dd8-b062-2dbaf0d1f4ec" target="_blank" class="news-link">President Trump said the United States may maintain a military presence in the Gulf region for some time.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">9</div>
+                            <div class="new-item-rank ">11</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fd-b402-7dd8-b062-27a1a9facfb1" target="_blank" class="news-link">Fed Chair Kevin Warsh said a new communications framework before year-end would not be surprising.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">10</div>
+                            <div class="new-item-rank ">12</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fd-a44f-7dd8-b062-1b8f077121a3" target="_blank" class="news-link">U.S. President Trump said the Iran agreement will be signed within the next 48 hours.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">11</div>
+                            <div class="new-item-rank ">13</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fd-8b58-7dd8-b062-10dc7adf29dd" target="_blank" class="news-link">Trump said the Fed keeping rates unchanged is fine and that a Fed rate hike could happen.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">12</div>
+                            <div class="new-item-rank ">14</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fc-b98b-7dd8-b062-08dc3a72fd96" target="_blank" class="news-link">Iranian state news agency said, per the memorandum of understanding text, the U.S. and Iran committed to reach a final agreement within 60 days of negotiations; the period may be extended.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">13</div>
+                            <div class="new-item-rank ">15</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fc-48b3-7dd8-b062-04a63224497a" target="_blank" class="news-link">Iran&#x27;s state news agency reported the MoU text states the U.S. and Iran will not interfere in each other&#x27;s internal affairs.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">14</div>
+                            <div class="new-item-rank ">17</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fb-b632-7dd8-b061-f7aeb1f56d8e" target="_blank" class="news-link">Federal Reserve Chair Kevin Warsh said the central bank will strive to be a good steward of taxpayer funds.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">15</div>
+                            <div class="new-item-rank ">18</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fb-39c3-7dd8-b061-ee7ee26c1ecd" target="_blank" class="news-link">Fed Chair Kevin Warsh said the Fed&#x27;s Inspector General will issue a report later this summer.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">16</div>
+                            <div class="new-item-rank ">19</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fb-37cc-7dd8-b061-e45e0b7ea8f9" target="_blank" class="news-link">Federal Reserve Chair Kevin Warsh, when asked about renovations to the Fed headquarters, said he has met with the inspector general.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">17</div>
+                            <div class="new-item-rank ">20</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fa-b28a-7dd8-b061-da6916621bb8" target="_blank" class="news-link">Federal Reserve Chair Kevin Warsh said the Fed will not hesitate to make statistical recommendations to executive-branch agencies.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">18</div>
+                            <div class="new-item-rank ">22</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6fa-13f0-7dd8-b061-c9b16ba38323" target="_blank" class="news-link">Federal Reserve Chair Kevin Warsh said the goal is not to completely overhaul the national accounts system.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">19</div>
+                            <div class="new-item-rank ">23</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f9-27af-7dd8-b061-c7e3329da6c6" target="_blank" class="news-link">Fed Chair Kevin Warsh said policymakers are focused on the demand-side effects of AI, while supply-side impacts remain less certain.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">20</div>
+                            <div class="new-item-rank ">24</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f8-14db-7dd8-b061-bf7d3db9963e" target="_blank" class="news-link">Federal Reserve Chairman Kevin Warsh said none of the 19 thought monetary policy needed to be tightened today.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">21</div>
+                            <div class="new-item-rank ">25</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f7-34ef-7dd8-b061-b5fb254ae7ee" target="_blank" class="news-link">Federal Reserve Chair KEVIN WARSH said more work remains to achieve price stability.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">22</div>
+                            <div class="new-item-rank ">26</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f7-1677-7dd8-b061-ae2cf3427184" target="_blank" class="news-link">Fed Chair Kevin Warsh said he does not believe the Fed faces a stark choice between full employment and price stability.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">23</div>
+                            <div class="new-item-rank ">27</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f6-e0e6-7dd8-b061-a69f751bb23d" target="_blank" class="news-link">Federal Reserve Chairman Kevin Warsh said it is difficult to say policy is restrictive anywhere except in the housing market.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">24</div>
+                            <div class="new-item-rank ">28</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f6-dbc8-7dd8-b061-9f455657911c" target="_blank" class="news-link">Federal Reserve Chairman Kevin Warsh said monetary policy effects are uneven.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">25</div>
+                            <div class="new-item-rank ">29</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f5-34f8-7dd8-b061-93d42a2c4a67" target="_blank" class="news-link">Fed Chair Kevin Warsh said artificial intelligence presents both opportunities and risks.</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">26</div>
+                            <div class="new-item-rank ">30</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://mktnews.net/flashDetail.html?id=019ed6f4-e95a-7dd8-b061-8ee9e349dec5" target="_blank" class="news-link">Fed chair Kevin Warsh said the committee discussed productivity and artificial intelligence today.</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">靠谱新闻 · 8条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank high">5</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-17/%E6%AC%A7%E8%82%A1%E5%85%A8%E7%BA%BF%E4%B8%8A%E6%B6%A8-%E7%BE%8E%E5%85%83%E6%8C%87%E6%95%B0%E4%B8%8B%E8%B7%8C%E9%BB%84%E9%87%91%E6%8C%81%E7%A8%B3-0f3937" target="_blank" class="news-link">欧股全线上涨 美元指数下跌黄金持稳</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank ">7</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-17/%E4%BA%9A%E7%BB%86%E5%AE%89%E5%AE%98%E5%91%98%E5%91%BC%E5%90%81%E9%81%BF%E5%85%8Dai%E6%95%B0%E6%8D%AE%E6%94%BF%E7%AD%96%E8%BF%87%E4%B8%A5-86dccb" target="_blank" class="news-link">亚细安官员呼吁避免AI数据政策过严</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">3</div>
+                            <div class="new-item-rank ">8</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-17/%E6%B8%AF%E5%BA%9C%E8%A6%81%E6%B1%82%E6%95%99%E8%82%B2%E5%AD%A6%E7%94%9F%E4%B8%8D%E5%BE%97%E7%94%A8ai%E5%8D%B1%E5%AE%B3%E5%9B%BD%E5%AE%89-07f638" target="_blank" class="news-link">港府要求教育学生不得用AI危害国安</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">4</div>
+                            <div class="new-item-rank ">12</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-17/%E9%99%86%E5%AE%B6%E5%98%B4%E8%AE%BA%E5%9D%9B%E5%AE%A3%E5%B8%83%E7%A6%BB%E5%B2%B8%E4%BA%BA%E6%B0%91%E5%B8%81%E5%A4%96%E6%B1%87%E4%BA%A4%E6%98%93%E8%AF%95%E7%82%B9-5d002d" target="_blank" class="news-link">陆家嘴论坛宣布离岸人民币外汇交易试点</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">5</div>
+                            <div class="new-item-rank ">14</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-17/%E4%B8%AD%E5%9B%BD%E5%9B%BD%E9%98%B2%E9%83%A8%E9%A9%B3%E6%96%A5%E6%97%A5%E6%9C%AC%E7%99%BD%E7%9A%AE%E4%B9%A6%E5%B9%B6%E6%8C%87%E5%85%B6%E5%8A%A0%E9%80%9F%E5%86%8D%E5%86%9B%E4%BA%8B%E5%8C%96-d02ab6" target="_blank" class="news-link">中国国防部驳斥日本白皮书并指其加速再军事化</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">6</div>
+                            <div class="new-item-rank ">16</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-17/%E5%8F%B0%E7%BE%8E%E5%AE%98%E5%91%98%E4%BA%92%E5%8A%A8%E9%A2%91%E7%B9%81-%E5%8F%B0%E6%B9%BE%E5%9B%BD%E9%99%85%E5%8F%82%E4%B8%8E%E5%86%8D%E9%81%87%E9%98%BB%E7%A2%8D-4f6f0f" target="_blank" class="news-link">台美官员互动频繁 台湾国际参与再遇阻碍</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">7</div>
+                            <div class="new-item-rank ">23</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-17/%E7%87%A7%E5%8E%9F%E7%A7%91%E6%8A%80%E4%B8%8E%E7%B2%A4%E8%8A%AF%E5%8D%8A%E5%AF%BC%E4%BD%93%E7%A7%91%E5%88%9B%E6%9D%BFipo%E5%B0%86%E4%BA%8E6%E6%9C%8815%E6%97%A5%E4%B8%8A%E4%BC%9A-c88707" target="_blank" class="news-link">燧原科技与粤芯半导体科创板IPO将于6月15日上会</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">8</div>
+                            <div class="new-item-rank ">26</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://kaopu.news/story/2026-06-17/%E5%8F%B0%E6%B9%BE%E5%8D%8A%E5%AF%BC%E4%BD%93%E4%BA%A7%E4%B8%9A%E5%8F%8C%E7%BA%BF%E6%8C%BA%E8%BF%9B%E6%AC%A7%E6%B4%B2-%E8%8E%B7%E8%8B%B1%E5%BE%B7%E5%AE%98%E6%96%B9%E5%8A%9B%E6%8C%BA-8e11ce" target="_blank" class="news-link">台湾半导体产业双线挺进欧洲 获英德官方力挺</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">华尔街见闻 快讯 · 27条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank top">1</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121212" target="_blank" class="news-link">美联储主席沃什：我们没有将决策结果外包给任何人。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank top">2</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121211" target="_blank" class="news-link">美联储主席沃什：我们在过去两天的（FOMC货币政策）讨论中出现了不错的家庭内斗。 当讨论结束后，我们处于一个更好的政策状态。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">3</div>
+                            <div class="new-item-rank top">3</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121210" target="_blank" class="news-link">美联储主席沃什：当针对未来数据做反应时，市场表现是最佳的。 市场价格可能是最重要的（参考）信息。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">4</div>
+                            <div class="new-item-rank high">5</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121208" target="_blank" class="news-link">美联储主席沃什：我们错过通胀目标的时间已经长达五年，将解决这个问题。 我们得到的大多数数据源自过时的调查方式。 私人公司处理实时信息。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">5</div>
+                            <div class="new-item-rank ">6</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121207" target="_blank" class="news-link">美联储主席沃什：新闻发布会可以是非常有用的沟通方式。 希望（通过新闻发布会）向媒体透露某些重要信息。 对新闻发布会进行一些调整可能会是有价值的。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">6</div>
+                            <div class="new-item-rank ">8</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121205" target="_blank" class="news-link">美联储主席沃什：美联储（货币政策）的限制性是不均衡的。 住房市场表明，美联储政策在一定程度上具有限制性。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">7</div>
+                            <div class="new-item-rank ">9</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121204" target="_blank" class="news-link">美联储主席沃什：我们已经抛弃了前瞻指引。 现在，某些人认为前瞻指引不正确。 我无法就即将做什么给出任何前瞻指引。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">8</div>
+                            <div class="new-item-rank ">10</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121203" target="_blank" class="news-link">美联储主席沃什：2%的通胀目标是美联储的长期目标。 只要没实现，就没理由重新评估这个通胀目标。 2%通胀目标将不会是通胀工作组的职责。 我们能够实现通胀目标，将恪守承诺。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">9</div>
+                            <div class="new-item-rank ">11</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121202" target="_blank" class="news-link">美联储主席沃什：任命五个货币政策领域的特别工作组。 包括沟通、资产负债表、数据源、生产力、就业。 生产力工作组将审查人工智能（AI）的影响。 通胀工作组将检查通胀的驱动因素。 资产负债表工作组将评估合适的储备职责。 预期沟通工作组将围绕经济预期概要（SEP）的调整提供建议，未来数周将开始工作。 预计所有工作组都将在年底之前完成，或大部分完成。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">10</div>
+                            <div class="new-item-rank ">12</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121201" target="_blank" class="news-link">美国两年期国债收益率涨10个基点，刷新日高至4.15%，沃什正在美联储举行新闻发布会。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">11</div>
+                            <div class="new-item-rank ">14</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121199" target="_blank" class="news-link">美联储主席沃什：我和同事们履行法定职责。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">12</div>
+                            <div class="new-item-rank ">15</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121198" target="_blank" class="news-link">美联储主席沃什：这次会议体现了美联储的最佳传统。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">13</div>
+                            <div class="new-item-rank ">16</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121197" target="_blank" class="news-link">WTI 7月原油期货收报76.79美元/桶。 NYMEX 7月天然气期货收报3.1450美元/百万英热单位。 NYMEX 7月汽油期货收报2.9096美元/加仑，NYMEX 7月取暖油期货收报3.1946美元/加仑。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">14</div>
+                            <div class="new-item-rank ">17</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121196" target="_blank" class="news-link">美联储主席凯文·沃什在新闻发布会上表示：重返美联储是一种荣幸。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">15</div>
+                            <div class="new-item-rank ">18</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121195" target="_blank" class="news-link">上期所原油期货2608合约夜盘收涨0.80%，报517元人民币/桶。 沪金夜盘收跌0.84%，沪银收跌1.36%。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">16</div>
+                            <div class="new-item-rank ">19</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121194" target="_blank" class="news-link">德意志银行首席美国经济学家Luzzetti：这处于预期中鹰派的一端。 决议声明包含大量冗余内容。（彭博电视）</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">17</div>
+                            <div class="new-item-rank ">20</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121193" target="_blank" class="news-link">伊朗外交部称伊方前往瑞士会谈的计划未变</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">18</div>
+                            <div class="new-item-rank ">21</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121192" target="_blank" class="news-link">提醒：北京时间02:30，美联储主席凯文·沃什将举行新闻发布会。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">19</div>
+                            <div class="new-item-rank ">22</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121191" target="_blank" class="news-link">摩根大通MICHELE：美联储在告诉我们政策并非处于中性状态。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">20</div>
+                            <div class="new-item-rank ">23</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121190" target="_blank" class="news-link">“新美联储通讯社”：美联储明显鹰派，政策声明大改</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">21</div>
+                            <div class="new-item-rank ">24</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121189" target="_blank" class="news-link">原美联储副主席、太平洋投资管理公司（PIMCO，品浩）全球经济顾问克拉里达：主席沃什没有给出点阵图看法不足为奇。（彭博电视）</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">22</div>
+                            <div class="new-item-rank ">25</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121187" target="_blank" class="news-link">美联储决议声明发布后，标普跌超0.3%，纳指跌超0.2%。 美元指数5分钟内上涨0.3327，报99.9866。 现货黄金从日高4382.28美元附近跳水至4278美元下方，瞬间转而跌超1%。 美国两年期国债收益率从4.05%附近瞬间飙升，涨穿4.14%刷新日高。 在美联储点阵图调整后，交易员押注美联储将更大幅度收紧政策。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">23</div>
+                            <div class="new-item-rank ">26</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121186" target="_blank" class="news-link">美联储：下调今年美国经济增速预期</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">24</div>
+                            <div class="new-item-rank ">27</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121185" target="_blank" class="news-link">美联储：下调今年美国失业率预期，维持后续预期不变</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">25</div>
+                            <div class="new-item-rank ">28</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121184" target="_blank" class="news-link">美联储：上调核心PCE通胀预期</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">26</div>
+                            <div class="new-item-rank ">29</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121183" target="_blank" class="news-link">点阵图：美联储上调2026-28年利率预期，维持长期利率预期不变</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">27</div>
+                            <div class="new-item-rank ">30</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://wallstreetcn.com/livenews/3121182" target="_blank" class="news-link">美联储按兵不动，一名FOMC成员没有给出利率点阵图信息，九人预计今年加息</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">雪球 · 2条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank ">19</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://xueqiu.com/s/MSFT" target="_blank" class="news-link">微软</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank ">22</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://xueqiu.com/s/AMD" target="_blank" class="news-link">AMD</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">金十数据 · 23条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank top">1</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025601094800" target="_blank" class="news-link">美联储主席沃什：对新的分析方法、民间数据以及官方数据改革均持开放态度。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank top">2</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025449794800" target="_blank" class="news-link">美联储主席沃什：我认为经过讨论后，我们最终达成了一个更好的结果。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">3</div>
+                            <div class="new-item-rank top">3</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025436511800" target="_blank" class="news-link">美联储主席沃什：我们就此进行了一场很好的内部讨论。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">4</div>
+                            <div class="new-item-rank high">4</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025411817800" target="_blank" class="news-link">美联储主席沃什：今天只有一项政策提案摆在桌面上。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">5</div>
+                            <div class="new-item-rank high">5</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025329469800" target="_blank" class="news-link">据伊朗SNN通讯社：伊朗外交部发言人表示，美国已承诺根据即将进行的谈判取消对伊朗的所有类型制裁。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">6</div>
+                            <div class="new-item-rank ">6</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025257050800" target="_blank" class="news-link">沃什首份政策声明：降息退出，加息仍存悬念</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">7</div>
+                            <div class="new-item-rank ">7</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025250943800" target="_blank" class="news-link">美联储主席沃什：当市场过于关注美联储的反应机制时，效率会降低。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">8</div>
+                            <div class="new-item-rank ">8</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025239567800" target="_blank" class="news-link">美联储主席沃什：金融市场价格是指导央行家最重要的信息来源。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">9</div>
+                            <div class="new-item-rank ">9</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025225859800" target="_blank" class="news-link">美联储主席沃什：金融市场在对数据做出反应时表现最佳。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">10</div>
+                            <div class="new-item-rank ">11</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025121032800" target="_blank" class="news-link">美联储主席沃什：我对新的数据来源持开放态度。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">11</div>
+                            <div class="new-item-rank ">12</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025115126800" target="_blank" class="news-link">美联储主席沃什：我们收到的一些经济数据可能只是历史的回声。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">12</div>
+                            <div class="new-item-rank ">13</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025049434800" target="_blank" class="news-link">美联储主席沃什：私营公司依赖实时信息。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">13</div>
+                            <div class="new-item-rank ">14</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025047616800" target="_blank" class="news-link">美联储主席沃什：如果美联储数据工作组有关于如何改善官方统计的建议，我会持开放态度。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">14</div>
+                            <div class="new-item-rank ">15</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618025031949800" target="_blank" class="news-link">策略师：美联储明显转鹰 表明官员并不认为美伊协议会显著缓解价格压力</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">15</div>
+                            <div class="new-item-rank ">16</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618024943630800" target="_blank" class="news-link">美联储主席沃什：我们所使用的大多数数据都采用了过时的调查方法。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">16</div>
+                            <div class="new-item-rank ">17</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618024930871800" target="_blank" class="news-link">美联储主席沃什：我们已经五年未能实现通胀目标，现在要着手纠正。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">17</div>
+                            <div class="new-item-rank ">19</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618024918862800" target="_blank" class="news-link">美联储主席沃什：声明中包含了我们准备就通胀问题所作的表述。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">18</div>
+                            <div class="new-item-rank ">20</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618024908771800" target="_blank" class="news-link">美联储主席沃什：实现2%通胀目标的承诺是坚定、一致且明确的。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">19</div>
+                            <div class="new-item-rank ">21</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618024846006800" target="_blank" class="news-link">美联储主席沃什：其中一些变化可能就是新闻发布会。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">20</div>
+                            <div class="new-item-rank ">22</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618024828315800" target="_blank" class="news-link">美联储主席沃什：我预计将会有更多变化。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">21</div>
+                            <div class="new-item-rank ">23</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618024811818800" target="_blank" class="news-link">美联储主席沃什暗示未来的新闻发布会可能取决于具体的沟通目标。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">22</div>
+                            <div class="new-item-rank ">24</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618024806199800" target="_blank" class="news-link">美联储主席沃什：未来的一些变化或许值得召开新闻发布会。</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">23</div>
+                            <div class="new-item-rank ">25</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://flash.jin10.com/detail/20260618024751537800" target="_blank" class="news-link">美联储主席沃什：新闻发布会是沟通的非常有效方式。（但）希望在新闻发布会上传达重要信息。</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="new-source-group">
+                        <div class="new-source-title">知乎 · 2条</div>
+                        <div class="new-item">
+                            <div class="new-item-number">1</div>
+                            <div class="new-item-rank ">12</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.zhihu.com/question/2050269478747889665" target="_blank" class="news-link">如果我们生活在 AI 构建的虚拟世界里，随手抛一枚均匀硬币，正面朝上的概率还是现实中公认的「50%」吗？</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="new-item">
+                            <div class="new-item-number">2</div>
+                            <div class="new-item-rank ">13</div>
+                            <div class="new-item-content">
+                                <div class="new-item-title"><a href="https://www.zhihu.com/question/2046913494243435264" target="_blank" class="news-link">如何理解韩国作家金爱烂所说的：「人类拥有而 AI 没有的一样东西，是犹豫不决」？</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <div class="footer-content">
+                    由 <span class="project-name">TrendRadar</span> 生成 · 
+                    <a href="https://github.com/sansan0/TrendRadar" target="_blank" class="footer-link">
+                        GitHub 开源项目
+                    </a>
+                    <br>
+                    <span style="color: #ea580c; font-weight: 500;">
+                        发现新版本 6.9.1，当前版本 3.3.0
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            async function saveAsImage() {
+                const button = event.target;
+                const originalText = button.textContent;
+                
+                try {
+                    button.textContent = '生成中...';
+                    button.disabled = true;
+                    window.scrollTo(0, 0);
+                    
+                    // 等待页面稳定
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    
+                    // 截图前隐藏按钮
+                    const buttons = document.querySelector('.save-buttons');
+                    buttons.style.visibility = 'hidden';
+                    
+                    // 再次等待确保按钮完全隐藏
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    const container = document.querySelector('.container');
+                    
+                    const canvas = await html2canvas(container, {
+                        backgroundColor: '#ffffff',
+                        scale: 1.5,
+                        useCORS: true,
+                        allowTaint: false,
+                        imageTimeout: 10000,
+                        removeContainer: false,
+                        foreignObjectRendering: false,
+                        logging: false,
+                        width: container.offsetWidth,
+                        height: container.offsetHeight,
+                        x: 0,
+                        y: 0,
+                        scrollX: 0,
+                        scrollY: 0,
+                        windowWidth: window.innerWidth,
+                        windowHeight: window.innerHeight
+                    });
+                    
+                    buttons.style.visibility = 'visible';
+                    
+                    const link = document.createElement('a');
+                    const now = new Date();
+                    const filename = `TrendRadar_热点新闻分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.png`;
+                    
+                    link.download = filename;
+                    link.href = canvas.toDataURL('image/png', 1.0);
+                    
+                    // 触发下载
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    button.textContent = '保存成功!';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                    
+                } catch (error) {
+                    const buttons = document.querySelector('.save-buttons');
+                    buttons.style.visibility = 'visible';
+                    button.textContent = '保存失败';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                }
+            }
+            
+            async function saveAsMultipleImages() {
+                const button = event.target;
+                const originalText = button.textContent;
+                const container = document.querySelector('.container');
+                const scale = 1.5; 
+                const maxHeight = 5000 / scale;
+                
+                try {
+                    button.textContent = '分析中...';
+                    button.disabled = true;
+                    
+                    // 获取所有可能的分割元素
+                    const newsItems = Array.from(container.querySelectorAll('.news-item'));
+                    const wordGroups = Array.from(container.querySelectorAll('.word-group'));
+                    const newSection = container.querySelector('.new-section');
+                    const errorSection = container.querySelector('.error-section');
+                    const header = container.querySelector('.header');
+                    const footer = container.querySelector('.footer');
+                    
+                    // 计算元素位置和高度
+                    const containerRect = container.getBoundingClientRect();
+                    const elements = [];
+                    
+                    // 添加header作为必须包含的元素
+                    elements.push({
+                        type: 'header',
+                        element: header,
+                        top: 0,
+                        bottom: header.offsetHeight,
+                        height: header.offsetHeight
+                    });
+                    
+                    // 添加错误信息（如果存在）
+                    if (errorSection) {
+                        const rect = errorSection.getBoundingClientRect();
+                        elements.push({
+                            type: 'error',
+                            element: errorSection,
+                            top: rect.top - containerRect.top,
+                            bottom: rect.bottom - containerRect.top,
+                            height: rect.height
+                        });
+                    }
+                    
+                    // 按word-group分组处理news-item
+                    wordGroups.forEach(group => {
+                        const groupRect = group.getBoundingClientRect();
+                        const groupNewsItems = group.querySelectorAll('.news-item');
+                        
+                        // 添加word-group的header部分
+                        const wordHeader = group.querySelector('.word-header');
+                        if (wordHeader) {
+                            const headerRect = wordHeader.getBoundingClientRect();
+                            elements.push({
+                                type: 'word-header',
+                                element: wordHeader,
+                                parent: group,
+                                top: groupRect.top - containerRect.top,
+                                bottom: headerRect.bottom - containerRect.top,
+                                height: headerRect.height
+                            });
+                        }
+                        
+                        // 添加每个news-item
+                        groupNewsItems.forEach(item => {
+                            const rect = item.getBoundingClientRect();
+                            elements.push({
+                                type: 'news-item',
+                                element: item,
+                                parent: group,
+                                top: rect.top - containerRect.top,
+                                bottom: rect.bottom - containerRect.top,
+                                height: rect.height
+                            });
+                        });
+                    });
+                    
+                    // 添加新增新闻部分
+                    if (newSection) {
+                        const rect = newSection.getBoundingClientRect();
+                        elements.push({
+                            type: 'new-section',
+                            element: newSection,
+                            top: rect.top - containerRect.top,
+                            bottom: rect.bottom - containerRect.top,
+                            height: rect.height
+                        });
+                    }
+                    
+                    // 添加footer
+                    const footerRect = footer.getBoundingClientRect();
+                    elements.push({
+                        type: 'footer',
+                        element: footer,
+                        top: footerRect.top - containerRect.top,
+                        bottom: footerRect.bottom - containerRect.top,
+                        height: footer.offsetHeight
+                    });
+                    
+                    // 计算分割点
+                    const segments = [];
+                    let currentSegment = { start: 0, end: 0, height: 0, includeHeader: true };
+                    let headerHeight = header.offsetHeight;
+                    currentSegment.height = headerHeight;
+                    
+                    for (let i = 1; i < elements.length; i++) {
+                        const element = elements[i];
+                        const potentialHeight = element.bottom - currentSegment.start;
+                        
+                        // 检查是否需要创建新分段
+                        if (potentialHeight > maxHeight && currentSegment.height > headerHeight) {
+                            // 在前一个元素结束处分割
+                            currentSegment.end = elements[i - 1].bottom;
+                            segments.push(currentSegment);
+                            
+                            // 开始新分段
+                            currentSegment = {
+                                start: currentSegment.end,
+                                end: 0,
+                                height: element.bottom - currentSegment.end,
+                                includeHeader: false
+                            };
+                        } else {
+                            currentSegment.height = potentialHeight;
+                            currentSegment.end = element.bottom;
+                        }
+                    }
+                    
+                    // 添加最后一个分段
+                    if (currentSegment.height > 0) {
+                        currentSegment.end = container.offsetHeight;
+                        segments.push(currentSegment);
+                    }
+                    
+                    button.textContent = `生成中 (0/${segments.length})...`;
+                    
+                    // 隐藏保存按钮
+                    const buttons = document.querySelector('.save-buttons');
+                    buttons.style.visibility = 'hidden';
+                    
+                    // 为每个分段生成图片
+                    const images = [];
+                    for (let i = 0; i < segments.length; i++) {
+                        const segment = segments[i];
+                        button.textContent = `生成中 (${i + 1}/${segments.length})...`;
+                        
+                        // 创建临时容器用于截图
+                        const tempContainer = document.createElement('div');
+                        tempContainer.style.cssText = `
+                            position: absolute;
+                            left: -9999px;
+                            top: 0;
+                            width: ${container.offsetWidth}px;
+                            background: white;
+                        `;
+                        tempContainer.className = 'container';
+                        
+                        // 克隆容器内容
+                        const clonedContainer = container.cloneNode(true);
+                        
+                        // 移除克隆内容中的保存按钮
+                        const clonedButtons = clonedContainer.querySelector('.save-buttons');
+                        if (clonedButtons) {
+                            clonedButtons.style.display = 'none';
+                        }
+                        
+                        tempContainer.appendChild(clonedContainer);
+                        document.body.appendChild(tempContainer);
+                        
+                        // 等待DOM更新
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                        // 使用html2canvas截取特定区域
+                        const canvas = await html2canvas(clonedContainer, {
+                            backgroundColor: '#ffffff',
+                            scale: scale,
+                            useCORS: true,
+                            allowTaint: false,
+                            imageTimeout: 10000,
+                            logging: false,
+                            width: container.offsetWidth,
+                            height: segment.end - segment.start,
+                            x: 0,
+                            y: segment.start,
+                            windowWidth: window.innerWidth,
+                            windowHeight: window.innerHeight
+                        });
+                        
+                        images.push(canvas.toDataURL('image/png', 1.0));
+                        
+                        // 清理临时容器
+                        document.body.removeChild(tempContainer);
+                    }
+                    
+                    // 恢复按钮显示
+                    buttons.style.visibility = 'visible';
+                    
+                    // 下载所有图片
+                    const now = new Date();
+                    const baseFilename = `TrendRadar_热点新闻分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+                    
+                    for (let i = 0; i < images.length; i++) {
+                        const link = document.createElement('a');
+                        link.download = `${baseFilename}_part${i + 1}.png`;
+                        link.href = images[i];
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        // 延迟一下避免浏览器阻止多个下载
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                    
+                    button.textContent = `已保存 ${segments.length} 张图片!`;
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('分段保存失败:', error);
+                    const buttons = document.querySelector('.save-buttons');
+                    buttons.style.visibility = 'visible';
+                    button.textContent = '保存失败';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                }
+            }
+            
+            document.addEventListener('DOMContentLoaded', function() {
+                window.scrollTo(0, 0);
+            });
+        </script>
+    </body>
+    </html>
+    

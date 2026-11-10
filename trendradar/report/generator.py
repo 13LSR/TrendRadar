@@ -10,6 +10,8 @@
 from pathlib import Path
 from typing import Dict, List, Optional, Callable
 
+from trendradar.report.frontend import write_frontend_data
+
 
 def prepare_report_data(
     stats: List[Dict],
@@ -154,6 +156,9 @@ def generate_html_report(
     render_html_func: Optional[Callable] = None,
     report_metadata: Optional[Dict] = None,
     translate_report_func: Optional[Callable] = None,
+    frontend_data_path: str = "",
+    frontend_generated_at: str = "",
+    show_new_section: bool = True,
 ) -> str:
     """
     生成 HTML 报告
@@ -176,6 +181,9 @@ def generate_html_report(
         date_folder: 日期文件夹名称
         time_filename: 时间文件名
         render_html_func: HTML 渲染函数
+        frontend_data_path: React 数据文件路径，非空时保留根目录 index.html
+        frontend_generated_at: 按应用时区格式化的生成时间
+        show_new_section: 是否包含新增热点区域
 
     Returns:
         str: 生成的 HTML 文件路径（时间戳快照路径）
@@ -196,6 +204,7 @@ def generate_html_report(
         id_to_name,
         mode,
         rank_threshold,
+        show_new_section,
     )
 
     # 翻译热榜 report_data（stats/new_titles）——在 prepare_report_data 过滤之后翻译，
@@ -211,6 +220,11 @@ def generate_html_report(
         for key in _METADATA_KEYS:
             if key in report_metadata:
                 report_data[key] = report_metadata[key]
+
+    if frontend_data_path:
+        write_frontend_data(
+            report_data, total_titles, mode, frontend_data_path, frontend_generated_at,
+        )
 
     # 渲染 HTML 内容
     if render_html_func:
@@ -239,8 +253,10 @@ def generate_html_report(
         f.write(html_content)
 
     # 根目录 index.html（供 GitHub Pages 访问）
-    root_index = Path("index.html")
-    with open(root_index, "w", encoding="utf-8") as f:
-        f.write(html_content)
+    # React 页面由前端构建维护，采集时只更新 JSON 和 output/ 下的原生报告。
+    if not frontend_data_path:
+        root_index = Path("index.html")
+        with open(root_index, "w", encoding="utf-8") as f:
+            f.write(html_content)
 
     return snapshot_file

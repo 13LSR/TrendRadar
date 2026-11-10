@@ -338,6 +338,9 @@ class AppContext:
             render_html_func=lambda *args, **kwargs: self.render_html(*args, rss_items=rss_items, rss_new_items=rss_new_items, ai_analysis=ai_analysis, standalone_data=standalone_data, **kwargs),
             report_metadata=report_metadata,
             translate_report_func=translate_report_func,
+            frontend_data_path=self.config.get("FRONTEND_DATA_PATH", ""),
+            frontend_generated_at=self.get_time().strftime("%Y-%m-%d %H:%M"),
+            show_new_section=self.show_new_section,
         )
 
     def render_html(
