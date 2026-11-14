@@ -46,6 +46,10 @@ npm --prefix frontend run build
 
 构建完成后，将 frontend/dist/ 的内容复制到仓库根目录；不要将旧 data.json 放进 frontend/public/，以免构建覆盖最新采集数据。启动根目录静态服务，检查日报、主题、折叠、目录和截图按钮。
 
+### npm 锁文件维护
+
+`frontend/package-lock.json` 必须包含 esbuild、Rollup、fsevents 等跨平台可选依赖记录。npm 12 会严格校验这些记录，缺失时 `npm ci` 报 EUSAGE 并停止，采集不会开始；Ubuntu runner 迁移提示本身不是错误。修复锁文件时，在没有 `node_modules` 的临时目录复制 `package.json` 和现有 `package-lock.json`，运行 `npm install --package-lock-only --ignore-scripts --no-audit --no-fund`，检查已有版本未变化后再复制锁文件回仓库。不要删除现有锁文件重新解析全部版本。提交前使用干净安装、前端构建和测试验证，工作流继续使用 `npm ci`。
+
 ### 页面排版与模块导出
 
 前端保留终端风格、琥珀/青色配色和新闻聚合规则，中文使用无衬线回退字体。桌面使用左侧固定目录与右侧新闻列表，窄屏使用单列布局、常驻当前模块目录与目录面板。样式集中在 `frontend/src/report.css`，新闻条目由 `NewsItem.jsx` 共享。
